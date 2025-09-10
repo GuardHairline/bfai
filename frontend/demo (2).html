@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>业财测算助手 UI</title>
+  <style>
+    /* Global Styles */
+    :root {
+      --primary: #0078d4;
+      --secondary: #f5f7fa;
+      --bg: #ffffff;
+      --sidebar-bg: #f7f9fc;
+      --sidebar-border: #e6eaf0;
+      --text-color: #333333;
+      --subtext-color: #666666;
+      --user-msg-bg: #d1e7ff;
+      --bot-msg-bg: #f0f2f5;
+      --hover-bg: #e6f0ff;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--text-color);
+      display: flex;
+      height: 100vh;
+      background-color: var(--bg);
+    }
+    .container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    /* Sidebar */
+    #sidebar {
+      width: 280px;
+      background-color: var(--sidebar-bg);
+      border-right: 1px solid var(--sidebar-border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    #sidebar .section {
+      padding: 16px 12px;
+    }
+    #sidebar .section h4 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      font-weight: normal;
+      color: var(--subtext-color);
+    }
+    #sidebar ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #sidebar li {
+      display: flex;
+      align-items: center;
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #sidebar li:hover {
+      background-color: var(--hover-bg);
+    }
+    #sidebar li.active {
+      background-color: var(--primary);
+      color: #ffffff;
+    }
+    #sidebar li .icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #sidebar li .icon svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+    /* Main area */
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--sidebar-border);
+      background-color: var(--secondary);
+    }
+    #header #conversationTitle {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    #header #measureButton {
+      padding: 6px 12px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      background-color: var(--primary);
+      color: #ffffff;
+      cursor: pointer;
+    }
+    #header #measureButton:hover {
+      background-color: #005fa3;
+    }
+    #chatArea {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    .message {
+      max-width: 75%;
+      margin-bottom: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      line-height: 1.4;
+    }
+    .message.user {
+      align-self: flex-end;
+      background-color: var(--user-msg-bg);
+      border-radius: 12px 12px 0 12px;
+      /* subtle shadow for chat bubbles */
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .message.bot {
+      align-self: flex-start;
+      background-color: var(--bot-msg-bg);
+      border-radius: 12px 12px 12px 0;
+      /* subtle shadow for chat bubbles */
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .message .content {
+      white-space: pre-wrap;
+    }
+    /* Interactive content inside messages */
+    .interactive-content {
+      margin-top: 8px;
+      padding: 8px;
+      border: 1px solid var(--sidebar-border);
+      border-radius: 6px;
+      background-color: #fafafa;
+    }
+    .task-table, .baseline-list, .history-list {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    .task-table th, .task-table td {
+      border: 1px solid #e1e4e8;
+      padding: 6px;
+      font-size: 14px;
+    }
+    .task-table th {
+      background-color: var(--secondary);
+      font-weight: 600;
+    }
+    .task-table button {
+      padding: 4px 8px;
+      font-size: 12px;
+      border: none;
+      background-color: var(--primary);
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .option-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .option-buttons button {
+      flex: 1;
+      padding: 6px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: var(--primary);
+      color: #ffffff;
+    }
+    .option-buttons button:hover {
+      background-color: #005fa3;
+    }
+    .baseline-list .item {
+      display: flex;
+      align-items: center;
+      padding: 6px;
+      border: 1px solid #e1e4e8;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      cursor: pointer;
+    }
+    .baseline-list .item.selected {
+      background-color: var(--hover-bg);
+    }
+    .baseline-list .item input {
+      margin-right: 8px;
+    }
+    .baseline-actions {
+      margin-top: 8px;
+    }
+    .baseline-actions button {
+      padding: 6px 12px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      background-color: var(--primary);
+      color: #ffffff;
+      cursor: pointer;
+    }
+    /* Chat input */
+    #chatInput {
+      display: flex;
+      padding: 12px 16px;
+      border-top: 1px solid var(--sidebar-border);
+      background-color: var(--secondary);
+    }
+    #chatInput input {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #chatInput button {
+      margin-left: 8px;
+      padding: 8px 16px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      background-color: var(--primary);
+      color: #ffffff;
+      cursor: pointer;
+    }
+    #chatInput button:disabled {
+      background-color: #a5aec1;
+      cursor: default;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside id="sidebar">
+      <div class="section">
+        <h4>对话历史</h4>
+        <ul id="conversationList">
+          <!-- conversations will be inserted here -->
+        </ul>
+      </div>
+      <div class="section">
+        <h4>测算历史</h4>
+        <ul id="measurementList">
+          <!-- measurement history -->
+        </ul>
+      </div>
+    </aside>
+    <main id="main">
+      <div id="header">
+        <span id="conversationTitle">新的会话</span>
+        <button id="measureButton">财务测算</button>
+      </div>
+      <div id="chatArea">
+        <!-- messages will appear here -->
+      </div>
+      <div id="chatInput">
+        <input id="userInput" type="text" placeholder="输入消息…">
+        <button id="sendButton" disabled>发送</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Embedded SVG icons for list items -->
+  <svg style="display:none">
+    <symbol id="icon-chat" viewBox="0 0 120 120">
+      <path d="M17.2,0h59.47c4.73,0,9.03,1.93,12.15,5.05c3.12,3.12,5.05,7.42,5.05,12.15v38.36c0,4.73-1.93,9.03-5.05,12.15 c-3.12,3.12-7.42,5.05-12.15,5.05H46.93L20.81,95.21c-1.21,1.04-3.04,0.9-4.08-0.32c-0.51-0.6-0.74-1.34-0.69-2.07l1.39-20.07H17.2 c-4.73,0-9.03-1.93-12.15-5.05C1.93,64.59,0,60.29,0,55.56V17.2c0-4.73,1.93-9.03,5.05-12.15C8.16,1.93,12.46,0,17.2,0L17.2,0z M102.31,27.98c3.37,0.65,6.39,2.31,8.73,4.65c3.05,3.05,4.95,7.26,4.95,11.9v38.36c0,4.64-1.89,8.85-4.95,11.9 c-3.05,3.05-7.26,4.95-11.9,4.95h-0.61l1.42,20.44l0,0c0.04,0.64-0.15,1.3-0.6,1.82c-0.91,1.07-2.52,1.19-3.58,0.28l-26.22-23.2 H35.01l17.01-17.3h36.04c7.86,0,14.3-6.43,14.3-14.3V29.11C102.35,28.73,102.34,28.35,102.31,27.98L102.31,27.98z M25.68,43.68 c-1.6,0-2.9-1.3-2.9-2.9c0-1.6,1.3-2.9,2.9-2.9h30.35c1.6,0,2.9,1.3,2.9,2.9c0,1.6-1.3,2.9-2.9,2.9H25.68L25.68,43.68z M25.68,29.32 c-1.6,0-2.9-1.3-2.9-2.9c0-1.6,1.3-2.9,2.9-2.9H68.7c1.6,0,2.9,1.3,2.9,2.9c0,1.6-1.3,2.9-2.9,2.9H25.68L25.68,29.32z M76.66,5.8H17.2c-3.13,0-5.98,1.28-8.05,3.35C7.08,11.22,5.8,14.06,5.8,17.2v38.36c0,3.13,1.28,5.98,3.35,8.05 c2.07,2.07,4.92,3.35,8.05,3.35h3.34v0.01l0.19,0.01c1.59,0.11,2.8,1.49,2.69,3.08l-1.13,16.26L43.83,67.8 c0.52-0.52,1.24-0.84,2.04-0.84h30.79c3.13,0,5.98-1.28,8.05-3.35c2.07-2.07,3.35-4.92,3.35-8.05V17.2c0-3.13-1.28-5.98-3.35-8.05 C82.65,7.08,79.8,5.8,76.66,5.8L76.66,5.8z"/>
+    </symbol>
+    <symbol id="icon-measure" viewBox="0 0 64 64">
+      <!-- Simple table/clipboard icon -->
+      <rect x="4" y="10" width="56" height="6" rx="1" ry="1"></rect>
+      <rect x="4" y="20" width="56" height="14" rx="1" ry="1"></rect>
+      <rect x="4" y="38" width="26" height="18" rx="1" ry="1"></rect>
+      <rect x="34" y="38" width="26" height="18" rx="1" ry="1"></rect>
+    </symbol>
+  </svg>
+
+  <script type="text/javascript">
+    // Sample Data
+    const sampleTasks = [
+      // 示例待测算任务，包含详细信息和推荐测算策略
+      {
+        id: 1,
+        name: '南京汽车测试项目',
+        department: '发动机系统研发部',
+        calculator: '小明',
+        brand: '皮卡',
+        spec: 'M',
+        // 详细项目信息用于展示任务详情
+        details: {
+          projectId: '1460139557956620288',
+          projectName: 'DE001-测试用',
+          department: '发动机系统研发部',
+          brand: '哈弗',
+          scale: 'M',
+          status: '测算中',
+          calculator: '小明',
+          createdAt: '2025-07-07 14:41:22',
+          updatedAt: '2025-07-12 17:28:39',
+          orderInfo: '1120DE09-02.1120DE09-03',
+          powerConfig: 'DE09(4B15E+DHT-3+PHEV+国内专属),DE09(E20NA+DHT-3+PHEV+国内专厘)'
+        },
+        // 智能测算策略列表，基于历史测算或基准任务
+        strategies: [
+          {
+            id: 'history-3',
+            label: '历史测算策略：南京汽车测试项目',
+            desc: '引用历史测算“南京汽车测试项目”',
+            baselineIds: [1, 2, 3]
+          },
+          {
+            id: 'history-4',
+            label: '历史测算策略：ES11中东版-项目复测',
+            desc: '引用历史测算“ES11中东版-项目复测”',
+            baselineIds: [4, 5, 6]
+          },
+          {
+            id: 'custom-baseline',
+            label: '自定义基准任务',
+            desc: '手动选择基准任务进行测算',
+            baselineIds: []
+          }
+        ]
+      },
+      {
+        id: 2,
+        name: 'ES11中东版',
+        department: '发动机系统研发部',
+        calculator: '小明',
+        brand: 'WEY',
+        spec: 'SS',
+        details: {
+          projectId: '1460139557956620288',
+          projectName: 'DE001-测试用',
+          department: '发动机系统研发部',
+          brand: '哈弗',
+          scale: 'M',
+          status: '测算中',
+          calculator: '小明',
+          createdAt: '2025-07-07 14:41:22',
+          updatedAt: '2025-07-12 17:28:39',
+          orderInfo: '1120DE09-02.1120DE09-03',
+          powerConfig: 'DE09(4B15E+DHT-3+PHEV+国内专属),DE09(E20NA+DHT-3+PHEV+国内专厘)'
+        },
+        strategies: [
+          {
+            id: 'history-3-ss',
+            label: '历史测算策略：南京汽车测试项目',
+            desc: '引用历史测算“南京汽车测试项目”',
+            baselineIds: [1, 2, 3]
+          },
+          {
+            id: 'history-4-ss',
+            label: '历史测算策略：ES11中东版-项目复测',
+            desc: '引用历史测算“ES11中东版-项目复测”',
+            baselineIds: [4, 5, 6]
+          },
+          {
+            id: 'custom-baseline-ss',
+            label: '自定义基准任务',
+            desc: '手动选择基准任务进行测算',
+            baselineIds: []
+          }
+        ]
+      }
+    ];
+    const sampleHistory = [
+      // 历史测算项目，用于演示“历史测算参考”功能
+      { id: 3, name: '南京汽车测试项目', department: '发动机系统研发部', calculator: '刘晶晶', brand: '皮卡', spec: 'M' },
+      { id: 4, name: 'ES11中东版-项目复测', department: '发动机系统研发部', calculator: '刘晶晶', brand: 'WEY', spec: 'S' }
+    ];
+    const sampleBaseline = [
+      // 基准任务信息，包括工时和月度明细，用于演示测算结果
+      { id: 1, name: '计算数模质量质心', type: '借用', hours: 10, monthlyDetails: { '2025-07': 4, '2025-08': 3, '2025-09': 3 }, powerConfig: 'DE09（4B15E+DHT - 3+PHEV+国内专属）', matter: '测试、完全借用' },
+      { id: 2, name: '全尺寸全功能检查表', type: '小改', hours: 20, monthlyDetails: { '2025-07': 8, '2025-08': 6, '2025-09': 6 }, powerConfig: 'DE09（4B15E+DHT - 3+PHEV+国内专属）', matter: '测试、在现有机型基' },
+      { id: 3, name: '试验车辆跟踪及问题处理', type: '借用', hours: 30, monthlyDetails: { '2025-07': 12, '2025-08': 9, '2025-09': 9 }, powerConfig: 'DE09（4B15E+DHT - 3+PHEV+国内专属）', matter: '测试2、完全借用' },
+      { id: 4, name: 'ET准入成本达成测量', type: '全新', hours: 40, monthlyDetails: { '2025-07': 16, '2025-08': 12, '2025-09': 12 }, powerConfig: 'DE09（4B15E+DHT - 3+PHEV+国内专属）', matter: '测试6、全新开发' },
+      { id: 5, name: 'SE议题研讨', type: '小改', hours: 50, monthlyDetails: { '2025-07': 20, '2025-08': 15, '2025-09': 15 }, powerConfig: 'DE09（4B15E+DHT - 3+PHEV+国内专属）', matter: '测试、在现有机型基' },
+      { id: 6, name: '标杆专利检索申请及报告确认', type: '全新', hours: 60, monthlyDetails: { '2025-07': 24, '2025-08': 18, '2025-09': 18 }, powerConfig: 'DE09（4B15E+DHT - 3+PHEV+国内专属）', matter: '测试3、全新开发' },
+      { id: 7, name: '设计评价确认 - PT', type: '全新', hours: 70, monthlyDetails: { '2025-07': 28, '2025-08': 21, '2025-09': 21 }, powerConfig: 'DE09（4B15E+DHT - 3+PHEV+国内专属）', matter: '测试4、全新开发' },
+      { id: 8, name: '标杆专利检索申请及报告确认', type: '全新', hours: 80, monthlyDetails: { '2025-07': 32, '2025-08': 24, '2025-09': 24 }, powerConfig: 'DE09（4B15E+DHT - 3+PHEV+国内专属）', matter: '测试2、全新开发' },
+      { id: 9, name: '保安防灾校核', type: '全新', hours: 90, monthlyDetails: { '2025-07': 36, '2025-08': 27, '2025-09': 27 }, powerConfig: 'DE09（4B15E+DHT - 3+PHEV+国内专属）', matter: '测试2、全新开发' },
+      { id: 10, name: '车型成本重量动态跟踪表 - NC', type: '借用', hours: 100, monthlyDetails: { '2025-07': 40, '2025-08': 30, '2025-09': 30 }, powerConfig: 'DE09（4B15E+DHT - 3+PHEV+国内专属）', matter: '测试、完全借用' }
+    ];
+
+    // Conversation and measurement history storage
+    let conversations = [];
+    let measurementHistory = [];
+    let activeConv = null;
+
+    // DOM Elements
+    const conversationListEl = document.getElementById('conversationList');
+    const measurementListEl = document.getElementById('measurementList');
+    const conversationTitleEl = document.getElementById('conversationTitle');
+    const chatAreaEl = document.getElementById('chatArea');
+    const userInputEl = document.getElementById('userInput');
+    const sendButtonEl = document.getElementById('sendButton');
+    const measureButtonEl = document.getElementById('measureButton');
+
+    // Utility to create unique IDs
+    let convCounter = 1;
+    function generateConvId() { return 'conv' + (convCounter++); }
+
+    // Create a new conversation and set as active
+    function createConversation(title = '新的会话') {
+      const convId = generateConvId();
+      const newConv = {
+        id: convId,
+        title: title,
+        messages: [],
+        measurements: []
+      };
+      conversations.push(newConv);
+      activeConv = newConv;
+      renderConversationList();
+      renderMeasurementHistory();
+      renderChatArea();
+    }
+
+    // Render conversation list
+    function renderConversationList() {
+      conversationListEl.innerHTML = '';
+      conversations.forEach(conv => {
+        const li = document.createElement('li');
+        li.dataset.id = conv.id;
+        li.className = conv.id === activeConv.id ? 'active' : '';
+        // Icon for conversation
+        const icon = document.createElement('span');
+        icon.className = 'icon';
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#icon-chat');
+        svg.appendChild(use);
+        icon.appendChild(svg);
+        li.appendChild(icon);
+        const text = document.createElement('span');
+        text.textContent = conv.title;
+        li.appendChild(text);
+        li.addEventListener('click', () => {
+          activeConv = conv;
+          renderConversationList();
+          renderMeasurementHistory();
+          renderChatArea();
+        });
+        conversationListEl.appendChild(li);
+      });
+    }
+
+    // Render measurement history list
+    function renderMeasurementHistory() {
+      measurementListEl.innerHTML = '';
+      measurementHistory.forEach((item, idx) => {
+        const li = document.createElement('li');
+        li.dataset.index = idx;
+        // Use the measure icon
+        const icon = document.createElement('span');
+        icon.className = 'icon';
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#icon-measure');
+        svg.appendChild(use);
+        icon.appendChild(svg);
+        li.appendChild(icon);
+        const text = document.createElement('span');
+        text.textContent = item.title;
+        li.appendChild(text);
+        // On click, load conversation and scroll to the result message
+        li.addEventListener('click', () => {
+          const conv = conversations.find(c => c.id === item.convId);
+          if (conv) {
+            activeConv = conv;
+            renderConversationList();
+            renderChatArea(() => {
+              // Scroll to the last message
+              chatAreaEl.scrollTop = chatAreaEl.scrollHeight;
+            });
+          }
+        });
+        measurementListEl.appendChild(li);
+      });
+    }
+
+    // Render chat area for active conversation
+    function renderChatArea(callback) {
+      chatAreaEl.innerHTML = '';
+      if (!activeConv) return;
+      conversationTitleEl.textContent = activeConv.title;
+      activeConv.messages.forEach(msg => {
+          if (typeof msg === 'function') {
+            // Deferred function to insert interactive content
+            msg();
+          } else {
+            const div = document.createElement('div');
+            div.className = 'message ' + msg.sender;
+            const content = document.createElement('div');
+            content.className = 'content';
+            content.innerHTML = msg.text;
+            div.appendChild(content);
+            chatAreaEl.appendChild(div);
+          }
+      });
+      // Scroll to bottom
+      chatAreaEl.scrollTop = chatAreaEl.scrollHeight;
+      if (callback) callback();
+    }
+
+    // Append message to active conversation
+    function appendMessage(sender, text, interactiveFn) {
+      if (!activeConv) return;
+      if (interactiveFn) {
+        activeConv.messages.push(interactiveFn);
+      } else {
+        activeConv.messages.push({ sender, text });
+      }
+      renderChatArea();
+    }
+
+    // Event: enable send button
+    userInputEl.addEventListener('input', () => {
+      sendButtonEl.disabled = userInputEl.value.trim() === '';
+    });
+
+    // Event: send message
+    sendButtonEl.addEventListener('click', () => {
+      const text = userInputEl.value.trim();
+      if (!text) return;
+      userInputEl.value = '';
+      sendButtonEl.disabled = true;
+      appendMessage('user', escapeHtml(text));
+      // Placeholder: respond with echo
+      setTimeout(() => {
+        appendMessage('bot', '（待接入后台）您说的是：' + escapeHtml(text));
+      }, 500);
+    });
+
+    // Escape HTML to prevent injection
+    function escapeHtml(str) {
+      return str.replace(/[&<>\"']/g, function(match) {
+        const escape = {
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        };
+        return escape[match];
+      });
+    }
+
+    // Measure button click handler
+    measureButtonEl.addEventListener('click', () => {
+      // Start measurement process in conversation
+      appendMessage('user', '点击了财务测算按钮');
+      appendMessage('bot', '请从待办任务中选择项目进行测算：', () => displayTaskTable());
+    });
+
+    // Display task selection as a table
+    function displayTaskTable() {
+      const table = document.createElement('table');
+      table.className = 'task-table';
+      const headerRow = document.createElement('tr');
+      ['项目名称','部门','测算人','品牌','开发规格','操作'].forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h;
+        headerRow.appendChild(th);
+      });
+      table.appendChild(headerRow);
+      sampleTasks.forEach(task => {
+        const tr = document.createElement('tr');
+      // 使用任务的测算人字段，如果没有则显示“待分配”
+        const cells = [
+          task.name,
+          task.department,
+          task.calculator || '待分配',
+          task.brand,
+          task.spec
+        ];
+        cells.forEach(value => {
+          const td = document.createElement('td');
+          td.textContent = value;
+          tr.appendChild(td);
+        });
+        const tdOp = document.createElement('td');
+        const btn = document.createElement('button');
+        btn.textContent = '测算';
+        btn.addEventListener('click', () => selectTask(task));
+        tdOp.appendChild(btn);
+        tr.appendChild(tdOp);
+        table.appendChild(tr);
+      });
+      const wrapper = document.createElement('div');
+      wrapper.className = 'interactive-content';
+      wrapper.appendChild(table);
+      chatAreaEl.appendChild(wrapper);
+    }
+
+    // When a task is selected
+    function selectTask(task) {
+      appendMessage('user', '选择任务：' + task.name);
+      // 直接显示任务详情和推荐的智能测算策略
+      appendMessage('bot', '以下是项目详情和智能测算策略，请选择：', () => {
+        showTaskDetailsAndStrategies(task);
+      });
+    }
+
+    // Display options for history reference or baseline selection
+    function showHistoryBaselineOptions(task) {
+      const container = document.createElement('div');
+      container.className = 'interactive-content';
+      const optionsDiv = document.createElement('div');
+      optionsDiv.className = 'option-buttons';
+      // History reference button
+      const historyBtn = document.createElement('button');
+      historyBtn.textContent = '历史测算参考';
+      historyBtn.addEventListener('click', () => {
+        appendMessage('user', '历史测算参考');
+        appendMessage('bot', '请选择历史项目参考：', () => displayHistoryList(task));
+      });
+      // Direct baseline button
+      const baselineBtn = document.createElement('button');
+      baselineBtn.textContent = '直接选择基准任务';
+      baselineBtn.addEventListener('click', () => {
+        appendMessage('user', '直接选择基准任务');
+        appendMessage('bot', '请选择基准任务：', () => displayBaselineList(task));
+      });
+      optionsDiv.appendChild(historyBtn);
+      optionsDiv.appendChild(baselineBtn);
+      container.appendChild(optionsDiv);
+      chatAreaEl.appendChild(container);
+    }
+
+    // Display history projects for reference
+    function displayHistoryList(task) {
+      const container = document.createElement('div');
+      container.className = 'interactive-content';
+      const list = document.createElement('div');
+      list.className = 'history-list';
+      // Create list rows
+      sampleHistory.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'baseline-list item';
+        row.textContent = item.name + ' (' + item.brand + ', ' + item.spec + ')';
+        row.addEventListener('click', () => {
+          appendMessage('user', '参考项目：' + item.name);
+          appendMessage('bot', '已引用历史项目“' + escapeHtml(item.name) + '”。请继续选择基准任务：', () => displayBaselineList(task));
+        });
+        list.appendChild(row);
+      });
+      container.appendChild(list);
+      chatAreaEl.appendChild(container);
+    }
+
+    // Display selected task details in a table format
+    function displayTaskDetails(task) {
+      const container = document.createElement('div');
+      container.className = 'interactive-content';
+      const table = document.createElement('table');
+      table.className = 'task-table';
+      // Build table body rows for each field
+      const tbody = document.createElement('tbody');
+      const details = [
+        ['项目名称', task.name],
+        ['部门', task.department],
+        ['测算人', task.calculator || '待分配'],
+        ['品牌', task.brand],
+        ['开发规格', task.spec]
+      ];
+      details.forEach(([label, value]) => {
+        const tr = document.createElement('tr');
+        const th = document.createElement('th');
+        th.style.textAlign = 'left';
+        th.textContent = label;
+        const td = document.createElement('td');
+        td.textContent = value;
+        tr.appendChild(th);
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      container.appendChild(table);
+      chatAreaEl.appendChild(container);
+    }
+
+    // Display baseline tasks for selection
+    function displayBaselineList(task) {
+      const container = document.createElement('div');
+      container.className = 'interactive-content';
+      const list = document.createElement('div');
+      list.className = 'baseline-list';
+      // Keep track of selected items
+      const selected = new Set();
+      sampleBaseline.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'item';
+        row.textContent = item.id + '. ' + item.name + ' (' + item.type + ')';
+        row.addEventListener('click', () => {
+          if (selected.has(item.id)) {
+            selected.delete(item.id);
+            row.classList.remove('selected');
+          } else {
+            selected.add(item.id);
+            row.classList.add('selected');
+          }
+        });
+        list.appendChild(row);
+      });
+      container.appendChild(list);
+      // Submit button
+      const actions = document.createElement('div');
+      actions.className = 'baseline-actions';
+      const submit = document.createElement('button');
+      submit.textContent = '提交测算';
+      submit.addEventListener('click', () => {
+        if (selected.size === 0) {
+          appendMessage('bot', '请选择至少一个基准任务。');
+          return;
+        }
+        const ids = Array.from(selected);
+        const names = ids.map(i => sampleBaseline.find(b => b.id === i).name);
+        appendMessage('user', '提交测算，基准任务：' + names.join('，'));
+        // Generate result summary
+        appendMessage('bot', '测算完成！以下为测算结果摘要：<br>所选基准任务：' + names.map(n => `<span>${escapeHtml(n)}</span>`).join('，'), () => {
+          displayResultSummary(task, ids);
+        });
+      });
+      actions.appendChild(submit);
+      container.appendChild(actions);
+      chatAreaEl.appendChild(container);
+    }
+
+    // Display measurement result summary and update histories
+    function displayResultSummary(task, baselineIds) {
+      // Compose summary
+      const summaryTitle = task.name + ' - ' + new Date().toLocaleString();
+      const baselineNames = baselineIds.map(id => sampleBaseline.find(b => b.id === id).name);
+      // Append to measurement history
+      measurementHistory.push({ title: summaryTitle, convId: activeConv.id });
+      // Append to conversation's measurements
+      activeConv.measurements.push({ task: task.name, baseline: baselineNames });
+      renderMeasurementHistory();
+    }
+
+    /**
+     * 显示任务详情和智能测算策略列表。
+     * 在用户选择任务后调用，展示项目详细信息和策略按钮。
+     */
+    function showTaskDetailsAndStrategies(task) {
+      const container = document.createElement('div');
+      container.className = 'interactive-content';
+      // 项目详情表
+      if (task.details) {
+        const table = document.createElement('table');
+        table.className = 'task-table';
+        const tbody = document.createElement('tbody');
+        Object.entries(task.details).forEach(([key, value]) => {
+          const tr = document.createElement('tr');
+          const th = document.createElement('th');
+          th.style.textAlign = 'left';
+          let label = '';
+          switch (key) {
+            case 'projectId': label = '项目ID'; break;
+            case 'projectName': label = '项目名称'; break;
+            case 'department': label = '部门'; break;
+            case 'brand': label = '品牌'; break;
+            case 'scale': label = '开发规模'; break;
+            case 'status': label = '测算状态'; break;
+            case 'calculator': label = '测算人'; break;
+            case 'createdAt': label = '创建时间'; break;
+            case 'updatedAt': label = '更新时间'; break;
+            case 'orderInfo': label = '订单信息'; break;
+            case 'powerConfig': label = '动力配置'; break;
+            default: label = key;
+          }
+          th.textContent = label;
+          const td = document.createElement('td');
+          td.textContent = value;
+          tr.appendChild(th);
+          tr.appendChild(td);
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        container.appendChild(table);
+      }
+      // 策略标题
+      const stratHeader = document.createElement('div');
+      stratHeader.style.marginTop = '8px';
+      stratHeader.style.fontWeight = '600';
+      stratHeader.textContent = '测算策略';
+      container.appendChild(stratHeader);
+      // 策略列表
+      if (task.strategies && task.strategies.length > 0) {
+        task.strategies.forEach(strategy => {
+          const row = document.createElement('div');
+          row.className = 'strategy-row';
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'label';
+          labelSpan.textContent = strategy.label;
+          const descSpan = document.createElement('span');
+          descSpan.className = 'desc';
+          descSpan.textContent = strategy.desc;
+          const btn = document.createElement('button');
+          btn.textContent = '参考并测算';
+          btn.addEventListener('click', () => {
+            handleStrategyClick(task, strategy);
+          });
+          row.appendChild(labelSpan);
+          row.appendChild(descSpan);
+          row.appendChild(btn);
+          container.appendChild(row);
+        });
+      }
+      chatAreaEl.appendChild(container);
+    }
+
+    /**
+     * 根据选择的策略执行相应逻辑。
+     * 如果策略预先定义了基准任务，则直接展示基准任务详情和测算结果；
+     * 如果需要自定义基准任务，则进入选择流程。
+     */
+    function handleStrategyClick(task, strategy) {
+      appendMessage('user', '选择测算策略：' + strategy.label);
+      if (strategy.baselineIds && strategy.baselineIds.length > 0) {
+        appendMessage('bot', '为您展示基准任务及测算结果：', () => {
+          displayBaselineDetails(strategy.baselineIds);
+          displayMeasurementSummary(task, strategy.baselineIds);
+        });
+      } else {
+        appendMessage('bot', '请选择基准任务：', () => {
+          displayBaselineListForCustom(task);
+        });
+      }
+    }
+
+    /**
+     * 显示选定基准任务的详细信息，包括工时和月度明细。
+     */
+function displayBaselineDetails(baselineIds) {
+      // 展示基准任务的详细信息。列包括序号、动力配置、一级任务、改动类型、具体事项。
+      const container = document.createElement('div');
+      container.className = 'interactive-content';
+      const table = document.createElement('table');
+      table.className = 'task-table';
+      const header = document.createElement('tr');
+      ['序号','动力配置','一级任务','改动类型','具体事项'].forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h;
+        header.appendChild(th);
+      });
+      table.appendChild(header);
+      baselineIds.forEach((bid, index) => {
+        const b = sampleBaseline.find(item => item.id === bid);
+        if (!b) return;
+        const tr = document.createElement('tr');
+        // 序号
+        const tdIndex = document.createElement('td');
+        tdIndex.textContent = String(index + 1);
+        tr.appendChild(tdIndex);
+        // 动力配置
+        const tdPower = document.createElement('td');
+        tdPower.textContent = b.powerConfig || '';
+        tr.appendChild(tdPower);
+        // 一级任务
+        const tdName = document.createElement('td');
+        tdName.textContent = b.name;
+        tr.appendChild(tdName);
+        // 改动类型
+        const tdType = document.createElement('td');
+        tdType.textContent = b.type;
+        tr.appendChild(tdType);
+        // 具体事项
+        const tdMatter = document.createElement('td');
+        tdMatter.textContent = b.matter || '';
+        tr.appendChild(tdMatter);
+        table.appendChild(tr);
+      });
+      container.appendChild(table);
+      chatAreaEl.appendChild(container);
+    }
+
+    /**
+     * 根据所选基准任务生成测算摘要并提供提交按钮。
+     */
+    function displayMeasurementSummary(task, baselineIds) {
+      const container = document.createElement('div');
+      container.className = 'interactive-content';
+      let totalHours = 0;
+      baselineIds.forEach(id => {
+        const b = sampleBaseline.find(item => item.id === id);
+        if (b) totalHours += b.hours;
+      });
+      const p = document.createElement('p');
+      p.textContent = '测算结果：选择了 ' + baselineIds.length + ' 个基准任务，共计工时 ' + totalHours + ' 小时。';
+      container.appendChild(p);
+      const submit = document.createElement('button');
+      submit.textContent = '提交测算结果';
+      submit.addEventListener('click', () => {
+        submitMeasurement(task, baselineIds);
+      });
+      container.appendChild(submit);
+      chatAreaEl.appendChild(container);
+    }
+
+    /**
+     * 自定义选择基准任务的流程。
+     */
+    function displayBaselineListForCustom(task) {
+      const container = document.createElement('div');
+      container.className = 'interactive-content';
+      const list = document.createElement('div');
+      list.className = 'baseline-list';
+      const selected = new Set();
+      sampleBaseline.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'item';
+        row.textContent = item.id + '. ' + item.name + ' (' + item.type + ')';
+        row.addEventListener('click', () => {
+          if (selected.has(item.id)) {
+            selected.delete(item.id);
+            row.classList.remove('selected');
+          } else {
+            selected.add(item.id);
+            row.classList.add('selected');
+          }
+        });
+        list.appendChild(row);
+      });
+      container.appendChild(list);
+      const actions = document.createElement('div');
+      actions.className = 'baseline-actions';
+      const submit = document.createElement('button');
+      submit.textContent = '提交测算结果';
+      submit.addEventListener('click', () => {
+        if (selected.size === 0) {
+          appendMessage('bot', '请选择至少一个基准任务。');
+          return;
+        }
+        const ids = Array.from(selected);
+        appendMessage('user', '提交测算结果，基准任务：' + ids.map(id => sampleBaseline.find(b => b.id === id).name).join('，'));
+        appendMessage('bot', '为您展示基准任务及测算结果：', () => {
+          displayBaselineDetails(ids);
+          displayMeasurementSummary(task, ids);
+        });
+      });
+      actions.appendChild(submit);
+      container.appendChild(actions);
+      chatAreaEl.appendChild(container);
+    }
+
+    /**
+     * 提交测算并记录历史。
+     */
+    function submitMeasurement(task, baselineIds) {
+      const summaryTitle = task.name + ' - ' + new Date().toLocaleString();
+      measurementHistory.push({ title: summaryTitle, convId: activeConv.id });
+      const baselineNames = baselineIds.map(id => sampleBaseline.find(b => b.id === id)?.name || '').filter(Boolean);
+      activeConv.measurements.push({ task: task.name, baseline: baselineNames });
+      renderMeasurementHistory();
+      appendMessage('bot', '测算结果已提交。');
+    }
+
+    // Initialize
+    createConversation();
+  </script>
+</body>
+</html>
