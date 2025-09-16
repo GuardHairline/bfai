@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, message } from 'antd';
+import { Layout, message, Modal } from 'antd';
 import { ProCard } from '@ant-design/pro-components';
 
 // Import custom components
@@ -18,7 +18,6 @@ import MeasurementEntry from './components/MeasurementEntry';
 // Import sample data.  Replace these with API calls when integrating
 // with a backend.
 import {
-  sampleTasks,
   projectInfo,
   sampleBaseline,
   strategies,
@@ -36,6 +35,9 @@ const { Content, Sider } = Layout;
 const App = () => {
   // Conversation messages for ProChat
   const [chats, setChats] = useState([]);
+  // Fetched tasks from backend
+  const [tasks, setTasks] = useState([]);
+  const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
   // Selected entities in measurement workflow
   const [selectedTask, setSelectedTask] = useState(null);
   const [currentStrategy, setCurrentStrategy] = useState(null);
@@ -55,10 +57,7 @@ const App = () => {
    * push a task list message so the user can choose a pending project.
    */
   const handleStartMeasurement = () => {
-    pushMessages([
-      { role: 'assistant', content: '请选择代办测算任务：' },
-      { role: 'task-list', content: null },
-    ]);
+    fetchTasks();
   };
 
   /**
@@ -189,10 +188,10 @@ const App = () => {
     const role = item?.originData?.role;
     switch (role) {
       case 'task-list':
-        return <TaskList tasks={sampleTasks} onSelect={handleSelectTask} />;
+        return <TaskList tasks={tasks} onSelect={handleSelectTask} />;
       case 'history-table': {
         // Build history rows: here we simply mirror the sampleTasks and assign strategies by index.
-        const historyRows = sampleTasks.map((t, index) => ({
+        const historyRows = tasks.map((t, index) => ({
           id: t.id,
           name: t.name,
           department: t.department,
@@ -274,10 +273,31 @@ const App = () => {
   };
 
   /**
-   * On initial mount start a new conversation.
+   * Fetches tasks from the backend and displays them in a modal.
+   */
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch('/api/v1/bfa/tasks');
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const result = await response.json();
+      if (result.data) {
+        setTasks(result.data);
+        setIsTaskModalVisible(true);
+      }
+    } catch (error) {
+      console.error("Failed to fetch tasks:", error);
+      message.error("获取任务列表失败");
+    }
+  };
+
+  /**
+   * On initial mount, start a new conversation and fetch tasks.
    */
   useEffect(() => {
     startNewConversation();
+    fetchTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -322,6 +342,21 @@ const App = () => {
           </ProCard>
         </Content>
       </Layout>
+      <Modal
+        title="待办任务列表"
+        open={isTaskModalVisible}
+        onCancel={() => setIsTaskModalVisible(false)}
+        footer={null}
+        width={800}
+      >
+        <TaskList 
+          tasks={tasks} 
+          onSelect={(task) => {
+            handleSelectTask(task);
+            setIsTaskModalVisible(false);
+          }} 
+        />
+      </Modal>
     </Layout>
   );
 };

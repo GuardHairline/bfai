@@ -5,28 +5,6 @@
  * makes it easy to switch to real data later.
  */
 
-// Pending measurement tasks.  Each represents a project requiring
-// financial estimation.  Replace with your own data when integrating
-// with a backend.
-export const sampleTasks = [
-  {
-    id: 1,
-    name: '南京汽车测试项目',
-    department: '发动机系统研发部',
-    calculator: '小明',
-    brand: '皮卡',
-    spec: 'M',
-  },
-  {
-    id: 2,
-    name: 'ES11中东版',
-    department: '发动机系统研发部',
-    calculator: '小明',
-    brand: 'WEY',
-    spec: 'SS',
-  },
-];
-
 // Base project information that is displayed when a task is selected.  In
 // a real implementation, fetch these details based on the selected
 // task.
