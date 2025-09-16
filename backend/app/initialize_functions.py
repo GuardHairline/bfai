@@ -1,13 +1,13 @@
 from flask import Flask
 from flasgger import Swagger
-from app.modules.main.route import main_bp
-from app.modules.bfa.route import bfa_bp
 from app.db.db import db
 
 
 def initialize_route(app: Flask):
+    """ Initialize Blueprints """
+    from app.modules.bfa.route import bfa_bp
+    
     with app.app_context():
-        app.register_blueprint(main_bp, url_prefix='/api/v1/main')
         app.register_blueprint(bfa_bp, url_prefix='/api/v1/bfa')
 
 

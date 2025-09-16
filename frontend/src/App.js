@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, message, Modal } from 'antd';
+import { Layout, message, Modal, List, Button } from 'antd';
 import { ProCard } from '@ant-design/pro-components';
 
 // Import custom components
@@ -18,10 +18,7 @@ import MeasurementEntry from './components/MeasurementEntry';
 // Import sample data.  Replace these with API calls when integrating
 // with a backend.
 import {
-  projectInfo,
   sampleBaseline,
-  strategies,
-  initialMeasurementHistory,
 } from './data/sampleData';
 
 const { Content, Sider } = Layout;
@@ -37,28 +34,27 @@ const App = () => {
   const [chats, setChats] = useState([]);
   // Fetched tasks from backend
   const [tasks, setTasks] = useState([]);
-  const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
   // Selected entities in measurement workflow
   const [selectedTask, setSelectedTask] = useState(null);
+  const [projectDetails, setProjectDetails] = useState(null);
+  const [historicalProjects, setHistoricalProjects] = useState([]);
   const [currentStrategy, setCurrentStrategy] = useState(null);
   const [selectedBaselineIds, setSelectedBaselineIds] = useState([]);
   const [baselineSelectionMode, setBaselineSelectionMode] = useState(false);
   // Histories for sidebar
   const [conversationHistory, setConversationHistory] = useState([]);
-  const [measurementHistory, setMeasurementHistory] = useState(
-    initialMeasurementHistory,
-  );
+  const [measurementHistory, setMeasurementHistory] = useState([]);
   // Model selection and login state
   const [selectedModel, setSelectedModel] = useState('default-model');
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState(null);
+  const [isLoginModalVisible, setIsLoginModalVisible] = useState(false);
+  const [persons, setPersons] = useState([]);
+
 
   /**
    * When the user clicks the "财务测算" start button in a new conversation,
    * push a task list message so the user can choose a pending project.
    */
-  const handleStartMeasurement = () => {
-    fetchTasks();
-  };
 
   /**
    * Utility to append messages to the chat.  Each message is cloned
@@ -86,11 +82,17 @@ const App = () => {
     setCurrentStrategy(null);
     setSelectedBaselineIds([]);
     setBaselineSelectionMode(false);
-    // Display measurement entry in chat
-    pushMessages([
-      { role: 'assistant', content: '请选择需要进行的操作：' },
-      { role: 'measurement-entry', content: null },
-    ]);
+    
+    if (loggedInUser) {
+      pushMessages([
+        { role: 'assistant', content: '请选择需要进行的操作：' },
+        { role: 'measurement-entry', content: null },
+      ]);
+    } else {
+      pushMessages([
+        { role: 'assistant', content: '欢迎使用业财一体化智能测算助手，请先登录。' },
+      ]);
+    }
   };
 
   /**
@@ -98,7 +100,7 @@ const App = () => {
    * records conversation history.  Sends project info, history table
    * and strategy options into the chat.
    */
-  const handleSelectTask = (task) => {
+  const handleSelectTask = async (task) => {
     setSelectedTask(task);
     setCurrentStrategy(null);
     setSelectedBaselineIds([]);
@@ -107,15 +109,38 @@ const App = () => {
       ...prev,
       { title: task.name, timestamp: new Date().toLocaleString() },
     ]);
-    pushMessages([
-      { role: 'assistant', content: `已选择项目：${task.name}。以下为该项目基础信息：` },
-      { role: 'project-info', content: null },
-      {
-        role: 'assistant',
-        content: '以下为历史测算参考列表：请点击对应行的“参考并测算”按钮引用历史策略。',
-      },
-      { role: 'history-table', content: null },
-    ]);
+
+    try {
+      // Fetch project details and historical projects in parallel
+      const [detailsRes, historyRes] = await Promise.all([
+        fetch(`/api/v1/bfa/tasks/${task.id}`),
+        fetch('/api/v1/bfa/history')
+      ]);
+
+      if (!detailsRes.ok || !historyRes.ok) {
+        throw new Error('Failed to fetch project data');
+      }
+
+      const detailsResult = await detailsRes.json();
+      const historyResult = await historyRes.json();
+
+      setProjectDetails(detailsResult.data);
+      setHistoricalProjects(historyResult.data || []);
+      
+      pushMessages([
+        { role: 'assistant', content: `已选择项目：${task.name}。以下为该项目基础信息：` },
+        { role: 'project-info', content: null },
+        {
+          role: 'assistant',
+          content: '以下为历史测算参考列表：请点击对应行的“参考并测算”按钮引用历史策略。',
+        },
+        { role: 'history-table', content: null },
+      ]);
+
+    } catch (error) {
+      console.error("Failed to fetch project details:", error);
+      message.error("获取项目详情或历史记录失败");
+    }
   };
 
   /**
@@ -188,33 +213,24 @@ const App = () => {
     const role = item?.originData?.role;
     switch (role) {
       case 'task-list':
-        return <TaskList tasks={tasks} onSelect={handleSelectTask} />;
+        // Use a unique key for each item in the list to avoid React warnings
+        const tasksWithUniqueKeys = tasks.map(t => ({ ...t, key: t.task_person_id }));
+        return <TaskList tasks={tasksWithUniqueKeys} onSelect={handleSelectTask} />;
       case 'history-table': {
-        // Build history rows: here we simply mirror the sampleTasks and assign strategies by index.
-        const historyRows = tasks.map((t, index) => ({
-          id: t.id,
-          name: t.name,
-          department: t.department,
-          calculator: '刘晶晶',
-          brand: t.brand,
-          spec: t.spec,
-          strategyId: strategies[index] ? strategies[index].id : strategies[strategies.length - 1].id,
-        }));
         return (
           <HistoryTable
-            history={historyRows}
+            history={historicalProjects}
             onReference={(record) => {
-              const strategy = strategies.find((s) => s.id === record.strategyId);
-              if (strategy) handleSelectStrategy(strategy);
+              // This part can be implemented when strategy logic is finalized
             }}
           />
         );
       }
       case 'project-info':
-        return <ProjectInfo project={projectInfo} />;
+        return <ProjectInfo project={projectDetails} />;
       case 'strategy-list':
         return (
-          <StrategyList strategies={strategies} onSelect={handleSelectStrategy} currentStrategy={currentStrategy} />
+          <StrategyList strategies={[]} onSelect={handleSelectStrategy} currentStrategy={currentStrategy} />
         );
       case 'baseline-list':
         return (
@@ -247,17 +263,58 @@ const App = () => {
    * inserts a placeholder assistant reply.  Otherwise, just update
    * the chat state.
    */
-  const onChatsChange = (newChats) => {
+  const onChatsChange = async (newChats) => {
     const last = newChats[newChats.length - 1];
-    if (last && last.role === 'user') {
-      pushMessages([
-        {
-          role: 'assistant',
-          content: '该回复由示例生成，实际对话需接入后端。',
-        },
-      ]);
-    }
     setChats(newChats);
+
+    if (last && last.role === 'user') {
+      const assistantMessageId = `${Date.now()}-assistant`;
+      // Add a placeholder for the assistant's response
+      pushMessages([{ id: assistantMessageId, role: 'assistant', content: '...' }]);
+
+      try {
+        const response = await fetch('/api/v1/bfa/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: last.content }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = '';
+
+        setChats(prev => prev.map(chat =>
+          chat.id === assistantMessageId ? { ...chat, content: '' } : chat
+        ));
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          
+          let chunk = decoder.decode(value, { stream: true });
+          
+          // Filter out <think> tags and other unwanted text
+          chunk = chunk.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+          
+          if (chunk) {
+            fullResponse += chunk;
+            setChats(prev => prev.map(chat =>
+              chat.id === assistantMessageId ? { ...chat, content: fullResponse } : chat
+            ));
+          }
+        }
+      } catch (error) {
+        console.error("Failed to get chat reply:", error);
+        message.error("获取AI回复失败");
+        setChats(prev => prev.map(chat =>
+          chat.id === assistantMessageId ? { ...chat, content: '获取回复失败，请重试。' } : chat
+        ));
+      }
+    }
   };
 
 
@@ -273,18 +330,26 @@ const App = () => {
   };
 
   /**
-   * Fetches tasks from the backend and displays them in a modal.
+   * Fetches tasks from the backend and displays them in the chat.
+   * If a user is logged in, it will only fetch tasks for that user.
    */
   const fetchTasks = async () => {
     try {
-      const response = await fetch('/api/v1/bfa/tasks');
+      let url = '/api/v1/bfa/tasks';
+      if (loggedInUser) {
+        url += `?person_id=${loggedInUser.id}`;
+      }
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
       const result = await response.json();
       if (result.data) {
         setTasks(result.data);
-        setIsTaskModalVisible(true);
+        pushMessages([
+          { role: 'assistant', content: '以下是待办任务列表，请选择要测算的项目：' },
+          { role: 'task-list', content: null },
+        ]);
       }
     } catch (error) {
       console.error("Failed to fetch tasks:", error);
@@ -293,13 +358,53 @@ const App = () => {
   };
 
   /**
-   * On initial mount, start a new conversation and fetch tasks.
+   * Fetches the list of persons from the backend to allow user selection.
+   */
+  const fetchPersons = async () => {
+    try {
+      const response = await fetch('/api/v1/bfa/persons');
+      if (!response.ok) throw new Error('Failed to fetch persons');
+      const result = await response.json();
+      setPersons(result.data || []);
+      setIsLoginModalVisible(true);
+    } catch (error) {
+      console.error(error);
+      message.error('获取接口人列表失败');
+    }
+  };
+
+  /**
+   * Handles the login/logout toggle.
+   */
+  const handleToggleLogin = () => {
+    if (loggedInUser) {
+      setLoggedInUser(null);
+      message.success('已登出');
+    } else {
+      fetchPersons();
+    }
+  };
+
+  /**
+   * Effect to reset the conversation whenever the login state changes.
+   * This ensures a fresh start after login/logout.
    */
   useEffect(() => {
     startNewConversation();
-    fetchTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loggedInUser]);
+
+  /**
+   * When the user clicks the "财务测算" start button in a new conversation,
+   * push a task list message so the user can choose a pending project.
+   */
+  const handleStartMeasurement = () => {
+    if (!loggedInUser) {
+      message.info('请先登录');
+      return;
+    }
+    fetchTasks();
+  };
 
   return (
     <Layout style={{ height: '100vh' }}>
@@ -309,8 +414,8 @@ const App = () => {
           measurementHistory={measurementHistory}
           onNewConversation={startNewConversation}
           onHistorySelect={handleHistorySelect}
-          loggedIn={loggedIn}
-          onToggleLogin={() => setLoggedIn(!loggedIn)}
+          loggedIn={!!loggedInUser}
+          onToggleLogin={handleToggleLogin}
         />
       </Sider>
       <Layout style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -343,18 +448,27 @@ const App = () => {
         </Content>
       </Layout>
       <Modal
-        title="待办任务列表"
-        open={isTaskModalVisible}
-        onCancel={() => setIsTaskModalVisible(false)}
+        title="选择登录身份"
+        open={isLoginModalVisible}
+        onCancel={() => setIsLoginModalVisible(false)}
         footer={null}
-        width={800}
       >
-        <TaskList 
-          tasks={tasks} 
-          onSelect={(task) => {
-            handleSelectTask(task);
-            setIsTaskModalVisible(false);
-          }} 
+        <List
+          dataSource={persons}
+          renderItem={(person) => (
+            <List.Item
+              actions={[<Button type="primary" onClick={() => {
+                setLoggedInUser(person);
+                setIsLoginModalVisible(false);
+                message.success(`已作为 ${person.name} 登录`);
+              }}>选择</Button>]}
+            >
+              <List.Item.Meta
+                title={person.name}
+                description={`部门: ${person.department}`}
+              />
+            </List.Item>
+          )}
         />
       </Modal>
     </Layout>

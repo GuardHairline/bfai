@@ -5,23 +5,6 @@
  * makes it easy to switch to real data later.
  */
 
-// Base project information that is displayed when a task is selected.  In
-// a real implementation, fetch these details based on the selected
-// task.
-export const projectInfo = {
-  projectId: '1460139557956620288',
-  projectName: 'DE001-测试用',
-  department: '发动机系统研发部',
-  brand: '哈弗',
-  scale: 'M',
-  status: '测算中',
-  calculator: '小明',
-  createdAt: '2025-07-07 14:41:22',
-  updatedAt: '2025-07-12 17:28:39',
-  orderInfo: '1120DE09-02.1120DE09-03',
-  powerConfig: 'DE09(4B15E+DHT-3+PHEV+国内专属),DE09(E20NA+DHT-3+PHEV+国内专属)',
-};
-
 // Baseline tasks library.  Each entry describes a first-level task
 // available for selection.  Use your own baseline library here.
 export const sampleBaseline = [
@@ -114,51 +97,5 @@ export const sampleBaseline = [
     matter: '测试、完全借用',
     hours: 55,
     months: 2,
-  },
-];
-
-// Strategy suggestions available for selection.  Each strategy lists
-// baselineIds that will be automatically selected when the strategy
-// is chosen.  A strategy with an empty baselineIds array indicates
-// that the user should select baseline tasks manually.
-export const strategies = [
-  {
-    id: 1,
-    name: '历史测算策略：南京汽车测试项目',
-    baselineIds: [1, 2, 3],
-  },
-  {
-    id: 2,
-    name: '历史测算策略：ES11中东版-项目复测',
-    baselineIds: [4, 5, 6],
-  },
-  {
-    id: 3,
-    name: '自定义选择基准任务',
-    baselineIds: [],
-  },
-];
-
-// Predefined measurement history.  Each entry includes a title and
-// baselineIds, used to retrieve baseline details when viewing the
-// history.  Replace with real history from your backend.
-export const initialMeasurementHistory = [
-  {
-    title: '南京汽车测试项目 - 示例',
-    baseline: [
-      '计算数模质量质心',
-      '全尺寸全功能检查表',
-      '试验车辆跟踪及问题处理',
-    ],
-    baselineIds: [1, 2, 3],
-  },
-  {
-    title: 'ES11中东版-项目复测 - 示例',
-    baseline: [
-      'ET准入成本达成测量',
-      'SE议题研讨',
-      '标杆专利检索申请及报告确认',
-    ],
-    baselineIds: [4, 5, 6],
   },
 ];

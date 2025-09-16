@@ -58,3 +58,18 @@ class LisMeasurePerson(db.Model):
     relation_tag = db.Column(db.String(32))
     person_department = db.Column(db.String(100))
     measure_person_id = db.Column(db.String(32))
+
+class BsBasicCenterHr(db.Model):
+    __tablename__ = 'bs_basic_center_hr'
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    create_by = db.Column(db.BigInteger)
+    create_time = db.Column(db.DateTime)
+    update_by = db.Column(db.BigInteger)
+    update_time = db.Column(db.DateTime)
+    department_id = db.Column(db.String(100), nullable=False)
+    department_name = db.Column(db.String(100))
+    center_number = db.Column(db.String(50))
+    center_department_id = db.Column(db.String(100))
+    center_department_name = db.Column(db.String(100))
+    is_need_set_center = db.Column(db.String(100))
