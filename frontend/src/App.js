@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Layout, message, Modal, List, Button } from 'antd';
 import { ProCard } from '@ant-design/pro-components';
 
-// Import custom components
+// 导入自定义组件
 import HistorySidebar from './components/HistorySidebar';
 import HeaderBar from './components/HeaderBar';
 import ChatArea from './components/ChatArea';
@@ -15,8 +15,7 @@ import BaselineDetails from './components/BaselineDetails';
 import BaselineHistoryDetails from './components/BaselineHistoryDetails';
 import MeasurementEntry from './components/MeasurementEntry';
 
-// Import sample data.  Replace these with API calls when integrating
-// with a backend.
+// 导入示例数据。在与后端集成时，这些应替换为API调用。
 import {
   sampleBaseline,
 } from './data/sampleData';
@@ -24,41 +23,34 @@ import {
 const { Content, Sider } = Layout;
 
 /**
- * App is the root component for the BusinessFinanceAI demo.  It
- * manages conversation state and delegates rendering to child
- * components.  Static data is imported from sampleData.js and can
- * be replaced with real API calls in the future.
+ * App是业财一体化智能测算助手的根组件。
+ * 它管理整个应用的会话状态，并将渲染任务委托给子组件。
+ * 静态数据从sampleData.js导入，将来可以用真实的API调用替换。
  */
 const App = () => {
-  // Conversation messages for ProChat
+  // ProChat所需的对话消息
   const [chats, setChats] = useState([]);
-  // Fetched tasks from backend
+  // 从后端获取的任务列表
   const [tasks, setTasks] = useState([]);
-  // Selected entities in measurement workflow
+  // 测算流程中选定的实体
   const [selectedTask, setSelectedTask] = useState(null);
   const [projectDetails, setProjectDetails] = useState(null);
   const [historicalProjects, setHistoricalProjects] = useState([]);
   const [currentStrategy, setCurrentStrategy] = useState(null);
   const [selectedBaselineIds, setSelectedBaselineIds] = useState([]);
   const [baselineSelectionMode, setBaselineSelectionMode] = useState(false);
-  // Histories for sidebar
+  // 侧边栏的历史记录
   const [conversationHistory, setConversationHistory] = useState([]);
   const [measurementHistory, setMeasurementHistory] = useState([]);
-  // Model selection and login state
+  // 模型选择和登录状态
   const [selectedModel, setSelectedModel] = useState('default-model');
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [isLoginModalVisible, setIsLoginModalVisible] = useState(false);
   const [persons, setPersons] = useState([]);
 
-
   /**
-   * When the user clicks the "财务测算" start button in a new conversation,
-   * push a task list message so the user can choose a pending project.
-   */
-
-  /**
-   * Utility to append messages to the chat.  Each message is cloned
-   * to assign unique IDs and timestamps.
+   * 工具函数，用于向聊天中追加消息。
+   * 每条消息都会被克隆以分配唯一的ID和时间戳。
    */
   const pushMessages = (messages) => {
     setChats((prev) => [
@@ -74,7 +66,7 @@ const App = () => {
   };
 
   /**
-   * Starts a fresh conversation and shows the measurement entry card.
+   * 开始一个全新的对话，并显示测算入口卡片。
    */
   const startNewConversation = () => {
     setChats([]);
@@ -96,9 +88,8 @@ const App = () => {
   };
 
   /**
-   * Handler for selecting a task.  Resets subsequent selections and
-   * records conversation history.  Sends project info, history table
-   * and strategy options into the chat.
+   * 处理任务选择的函数。
+   * 重置后续选择，记录对话历史，并将项目信息、历史表格和策略选项发送到聊天中。
    */
   const handleSelectTask = async (task) => {
     setSelectedTask(task);
@@ -111,7 +102,7 @@ const App = () => {
     ]);
 
     try {
-      // Fetch project details and historical projects in parallel
+      // 并行获取项目详情和历史项目
       const [detailsRes, historyRes] = await Promise.all([
         fetch(`/api/v1/bfa/tasks/${task.id}`),
         fetch('/api/v1/bfa/history')
@@ -144,9 +135,8 @@ const App = () => {
   };
 
   /**
-   * Handler for selecting a strategy.  If baselineIds are provided,
-   * show baseline details directly; otherwise prompt for manual
-   * selection.
+   * 处理策略选择的函数。
+   * 如果提供了基准任务ID，则直接显示基准任务详情；否则提示手动选择。
    */
   const handleSelectStrategy = (strategy) => {
     setCurrentStrategy(strategy);
@@ -168,7 +158,7 @@ const App = () => {
   };
 
   /**
-   * Called after manual baseline selection.  Shows baseline details.
+   * 手动选择基准任务后调用。显示基准任务详情。
    */
   const handleConfirmBaselines = () => {
     if (selectedBaselineIds.length === 0) return;
@@ -180,8 +170,8 @@ const App = () => {
   };
 
   /**
-   * Final submission handler.  Records result into measurement history
-   * and sends a confirmation message.
+   * 最终提交处理函数。
+   * 将结果记录到测算历史中，并发送确认消息。
    */
   const handleSubmitMeasurement = () => {
     if (!selectedTask) return;
@@ -198,7 +188,7 @@ const App = () => {
     pushMessages([
       { role: 'assistant', content: '测算结果已提交，感谢您的使用！如需再次测算，请新建会话。' },
     ]);
-    // Reset selection without starting a new conversation automatically
+    // 重置选择，但不自动开始新对话
     setSelectedTask(null);
     setCurrentStrategy(null);
     setSelectedBaselineIds([]);
@@ -206,14 +196,32 @@ const App = () => {
   };
 
   /**
-   * Renders custom chat items based on message roles.  Delegates
-   * rendering to appropriate components.
+   * 根据消息角色渲染自定义聊天项目。
+   * 将渲染任务委托给相应的组件。
    */
   const contentRender = (item, dom, defaultDom) => {
+    // 自定义渲染助手消息，以处理思考和回复
+    if (item?.originData?.role === 'assistant' && typeof item.content === 'object' && item.content !== null) {
+      return (
+        <div style={{ whiteSpace: 'pre-wrap' }}>
+          {item.content.thinking && (
+            <span style={{ color: '#aaa', fontStyle: 'italic' }}>
+              {item.content.thinking}
+            </span>
+          )}
+          {item.content.reply && (
+            <span>
+              {item.content.reply}
+            </span>
+          )}
+        </div>
+      );
+    }
+
     const role = item?.originData?.role;
     switch (role) {
       case 'task-list':
-        // Use a unique key for each item in the list to avoid React warnings
+        // 为列表中的每个项目使用唯一的key以避免React警告
         const tasksWithUniqueKeys = tasks.map(t => ({ ...t, key: t.task_person_id }));
         return <TaskList tasks={tasksWithUniqueKeys} onSelect={handleSelectTask} />;
       case 'history-table': {
@@ -221,7 +229,7 @@ const App = () => {
           <HistoryTable
             history={historicalProjects}
             onReference={(record) => {
-              // This part can be implemented when strategy logic is finalized
+              // 当策略逻辑最终确定后，可以实现这部分
             }}
           />
         );
@@ -259,9 +267,8 @@ const App = () => {
   };
 
   /**
-   * Handles chat updates.  When the last message comes from the user,
-   * inserts a placeholder assistant reply.  Otherwise, just update
-   * the chat state.
+   * 处理聊天更新。当最后一条消息来自用户时，
+   * 向AI后端请求回复，并以流式方式更新UI。
    */
   const onChatsChange = async (newChats) => {
     const last = newChats[newChats.length - 1];
@@ -269,8 +276,8 @@ const App = () => {
 
     if (last && last.role === 'user') {
       const assistantMessageId = `${Date.now()}-assistant`;
-      // Add a placeholder for the assistant's response
-      pushMessages([{ id: assistantMessageId, role: 'assistant', content: '...' }]);
+      // 为助手的响应添加一个占位符，其中包含一个复杂的内容对象
+      pushMessages([{ id: assistantMessageId, role: 'assistant', content: { thinking: '', reply: '' } }]);
 
       try {
         const response = await fetch('/api/v1/bfa/chat', {
@@ -285,7 +292,8 @@ const App = () => {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let fullResponse = '';
+        let buffer = '';
+        let isThinking = false;
 
         setChats(prev => prev.map(chat =>
           chat.id === assistantMessageId ? { ...chat, content: '' } : chat
@@ -295,17 +303,41 @@ const App = () => {
           const { value, done } = await reader.read();
           if (done) break;
           
-          let chunk = decoder.decode(value, { stream: true });
-          
-          // Filter out <think> tags and other unwanted text
-          chunk = chunk.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-          
-          if (chunk) {
-            fullResponse += chunk;
-            setChats(prev => prev.map(chat =>
-              chat.id === assistantMessageId ? { ...chat, content: fullResponse } : chat
-            ));
-          }
+          buffer += decoder.decode(value, { stream: true });
+
+          const processBuffer = () => {
+            if (!isThinking) {
+              const thinkStart = buffer.indexOf('<think>');
+              if (thinkStart === -1) {
+                updateContent(assistantMessageId, buffer, 'reply');
+                buffer = '';
+                return;
+              }
+              
+              const beforeThink = buffer.substring(0, thinkStart);
+              updateContent(assistantMessageId, beforeThink, 'reply');
+              buffer = buffer.substring(thinkStart + 7);
+              isThinking = true;
+            }
+
+            if (isThinking) {
+              const thinkEnd = buffer.indexOf('</think>');
+              if (thinkEnd === -1) {
+                updateContent(assistantMessageId, buffer, 'thinking');
+                buffer = '';
+                return;
+              }
+
+              const inThink = buffer.substring(0, thinkEnd);
+              updateContent(assistantMessageId, inThink, 'thinking');
+              buffer = buffer.substring(thinkEnd + 8);
+              isThinking = false;
+            }
+            // 如果缓冲区中还有更多内容，则再次处理
+            if(buffer.length > 0) processBuffer();
+          };
+
+          processBuffer();
         }
       } catch (error) {
         console.error("Failed to get chat reply:", error);
@@ -317,21 +349,57 @@ const App = () => {
     }
   };
 
+  /**
+   * 辅助函数，用于更新特定聊天消息的内容。
+   */
+  const updateContent = (id, chunk, part) => {
+    setChats(prev => prev.map(chat => {
+      if (chat.id === id) {
+        const newContent = { ...chat.content };
+        newContent[part] = (newContent[part] || '') + chunk;
+        return { ...chat, content: newContent };
+      }
+      return chat;
+    }));
+  };
 
   /**
-   * Handle click on a measurement history record.  Pushes the details
-   * into the chat for viewing.
+   * 组件挂载后，开始一个新对话。
+   * 当登录用户改变时，也会开始一个新对话。
+   */
+  useEffect(() => {
+    startNewConversation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedInUser]);
+
+  /**
+   * 用户在新对话中点击“财务测算”开始按钮时，
+   * 调用fetchTasks函数，获取待办任务列表。
+   */
+  const handleStartMeasurement = () => {
+    if (!loggedInUser) {
+      message.info('请先登录');
+      return;
+    }
+    fetchTasks();
+  };
+
+  /**
+   * 处理点击测算历史记录的函数。
+   * 将详情推送到聊天中以供查看。
    */
   const handleHistorySelect = (record) => {
+    // 此函数的内容可能需要更新，因为它引用了已删除的静态数据。
+    // 目前，只是打印到控制台。
+    console.log("Selected history:", record);
     pushMessages([
-      { role: 'assistant', content: `您查看了历史测算记录：${record.title}` },
-      { role: 'baseline-history-details', baselineIds: record.baselineIds },
+      { role: 'assistant', content: `您查看了历史测算记录：${record.name}` },
     ]);
   };
 
   /**
-   * Fetches tasks from the backend and displays them in the chat.
-   * If a user is logged in, it will only fetch tasks for that user.
+   * 从后端获取任务并在聊天中显示它们。
+   * 如果用户已登录，则只获取该用户的任务。
    */
   const fetchTasks = async () => {
     try {
@@ -358,7 +426,7 @@ const App = () => {
   };
 
   /**
-   * Fetches the list of persons from the backend to allow user selection.
+   * 从后端获取接口人列表，以供用户选择登录。
    */
   const fetchPersons = async () => {
     try {
@@ -374,7 +442,7 @@ const App = () => {
   };
 
   /**
-   * Handles the login/logout toggle.
+   * 处理登录/登出切换。
    */
   const handleToggleLogin = () => {
     if (loggedInUser) {
@@ -383,27 +451,6 @@ const App = () => {
     } else {
       fetchPersons();
     }
-  };
-
-  /**
-   * Effect to reset the conversation whenever the login state changes.
-   * This ensures a fresh start after login/logout.
-   */
-  useEffect(() => {
-    startNewConversation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loggedInUser]);
-
-  /**
-   * When the user clicks the "财务测算" start button in a new conversation,
-   * push a task list message so the user can choose a pending project.
-   */
-  const handleStartMeasurement = () => {
-    if (!loggedInUser) {
-      message.info('请先登录');
-      return;
-    }
-    fetchTasks();
   };
 
   return (
