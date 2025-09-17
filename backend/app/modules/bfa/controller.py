@@ -1,210 +1,239 @@
 from flask import jsonify, request, Response
-from sqlalchemy import func, String, cast, text
-
-from app.db.db import db
 from .models import LisProject, LisMeasurePerson, LisProjectOrder, BsBasicCenterHr
+from app.db.db import db
+from sqlalchemy import cast, func, String
 
 
 class BfaController:
-    """
-    BFA模块的控制器，负责处理业务逻辑。
-    """
     def get_tasks(self):
         """
         获取待办任务列表。
         如果提供了 person_id，则只返回该人员的任务。
-        任务是 measure_tag = '0' (未完成) 和 measure_status = '1' (已下发) 的项目。
+        任务过滤条件为 measure_tag = '0' (未完成) 和 measure_status = '1' (已下发)。
         """
-        person_id = request.args.get('person_id')
-
-        # 品牌ID到名称的映射
+        # 品牌和开发规模的映射关系
         brand_map = {
-            '1001': '本项目', '1002': '区域', '1003': '其他', '1004': '城市公司',
-            '1005': '战区', '1006': '集团'
+            '1': 'WEY', '2': '坦克', '3': '沙龙', '4': '哈弗', '5': '欧拉',
+            '6': '皮卡', '7': 'HEM', '8': '重卡', '9': '赛车', '10': '光束', '11': '平台项目'
         }
-        # 开发规模ID到名称的映射
-        sml_map = {
-            '1': 'S', '2': 'M', '3': 'L'
-        }
-
+        sml_map = {'0': 'SS', '1': 'S', '2': 'M', '3': 'L'}
+        
         try:
-            # 基础查询，从测算人员表开始
+            # 从请求参数中获取人员ID
+            person_id = request.args.get('person_id')
+
+            # 基础查询，从测算人员表开始，关联项目表和部门表
             query = db.session.query(
-                LisMeasurePerson.id.label('task_person_id'),
-                LisProject.id,
-                LisProject.name,
-                LisProject.financial_issuer,
-                LisProject.sml,
-                LisProject.brand,
-                BsBasicCenterHr.dept_name.label('department'),
-                LisMeasurePerson.measure_person.label('person_name'),
-                LisMeasurePerson.measure_person_id.label('person_id')
+                LisMeasurePerson,
+                LisProject,
+                BsBasicCenterHr.department_name
             ).join(
-                LisProject, LisMeasurePerson.project_id == LisProject.id
-            ).join(
-                BsBasicCenterHr, LisMeasurePerson.measure_dept_id == BsBasicCenterHr.id
-            ).filter(
+                LisProject,
+                cast(LisProject.id, String(32)).collate('utf8mb4_general_ci') == LisMeasurePerson.project_id
+            ).join( # 使用 join 以防人员没有对应的部门信息
+                BsBasicCenterHr,
+                LisMeasurePerson.person_department == BsBasicCenterHr.department_id
+            )
+
+            # 固定过滤条件：未完成且已下发的项目
+            query = query.filter(
                 LisProject.measure_tag == '0',
                 LisProject.measure_status == '1'
             )
-
-            # 如果提供了person_id，则按人员过滤
+            
+            # 如果提供了人员ID，则按人员进行过滤
             if person_id:
-                query = query.filter(LisMeasurePerson.measure_person_id == person_id)
+                query = query.filter(LisMeasurePerson.person == person_id)
 
-            tasks_from_db = query.all()
+            user_tasks = query.all()
 
-            tasks = []
-            # 用于跟踪已添加的任务，避免因同一任务分配给同一人的不同部门而产生重复
-            added_tasks = set()
+            # 格式化查询结果
+            task_list = [
+                {
+                    'id': project.id,
+                    'name': project.measures_project,
+                    'department': department_name if department_name else person.person_department,
+                    'calculator': person.person,
+                    'brand': brand_map.get(project.brand, project.brand),
+                    'spec': sml_map.get(project.sml, project.sml),
+                    'task_person_id': person.id
+                }
+                for person, project, department_name in user_tasks
+            ]
 
-            for task in tasks_from_db:
-                task_unique_key = (task.id, task.person_id)
-                if task_unique_key not in added_tasks:
-                    tasks.append({
-                        'task_person_id': task.task_person_id,
-                        'id': task.id,
-                        'name': task.name,
-                        'issuer': task.financial_issuer,
-                        'scale': sml_map.get(str(task.sml), task.sml),
-                        'brand': brand_map.get(str(task.brand), task.brand),
-                        'department': task.department,
-                        'person': task.person_name
-                    })
-                    added_tasks.add(task_unique_key)
-
-            return jsonify({"status": "success", "data": tasks})
+            return jsonify(data=task_list)
         except Exception as e:
-            # 记录异常对于调试非常重要
-            print(f"Error in get_tasks: {e}")
-            return jsonify({"status": "error", "message": str(e)}), 500
+            print(f"获取任务列表时出错: {e}")
+            return jsonify(error="获取任务列表失败", message=str(e)), 500
 
     def get_task_details(self, task_id):
         """
         根据任务ID获取项目的详细信息。
-        包括项目基础信息、关联的订单信息以及主要负责人信息。
         """
-        # 品牌和规模的映射关系
-        brand_map = {
-            '1001': '本项目', '1002': '区域', '1003': '其他', '1004': '城市公司',
-            '1005': '战区', '1006': '集团'
-        }
-        sml_map = {
-            '1': 'S', '2': 'M', '3': 'L'
-        }
         try:
             # 查询项目详情
-            project = db.session.query(LisProject).filter(cast(LisProject.id, String(32)).collate('utf8mb4_general_ci') == task_id).first()
-
+            project = db.session.query(LisProject).filter(LisProject.id == int(task_id)).one_or_none()
             if not project:
-                return jsonify({"status": "error", "message": "Task not found"}), 404
+                return jsonify(error="任务未找到"), 404
+            
+            # 查询关联的订单，以聚合动力配置和订单信息
+            orders = db.session.query(LisProjectOrder).filter(LisProjectOrder.project_id == str(task_id)).all()
+            power_configs = ",".join([order.power_conf for order in orders if order.power_conf])
+            order_info = ",".join([order.order_name for order in orders if order.order_name])
 
-            # 查询关联的订单
-            orders = db.session.query(LisProjectOrder).filter(LisProjectOrder.project_id == project.id).all()
-            order_list = [{
-                'id': order.id,
-                'name': order.order_name,
-                'code': order.order_code
-            } for order in orders]
+            # 查询项目的主要负责人
+            person = db.session.query(LisMeasurePerson).filter(LisMeasurePerson.project_id == str(task_id)).order_by(LisMeasurePerson.id.asc()).first()
 
-            # 查询主要负责人
-            primary_person = db.session.query(LisMeasurePerson).filter(
-                LisMeasurePerson.project_id == project.id,
-                LisMeasurePerson.is_primary == '1'  # 假设 '1' 代表主要负责人
-            ).first()
-            person_name = primary_person.measure_person if primary_person else "N/A"
-
-            # 组装返回数据
-            project_details = {
-                'id': project.id,
-                'name': project.name,
-                'brand': brand_map.get(str(project.brand), project.brand),
-                'scale': sml_map.get(str(project.sml), project.sml),
-                'orders': order_list,
-                'person': person_name
+            # 用于状态、品牌和规模的ID到文本映射
+            status_map = {'0': '编制中', '1': '测算中', '2': '财务汇总中', '3': '财务审批中', '4': '测算完成', '10': '已作废'}
+            brand_map = {
+                '1': 'WEY', '2': '坦克', '3': '沙龙', '4': '哈弗', '5': '欧拉',
+                '6': '皮卡', '7': 'HEM', '8': '重卡', '9': '赛车', '10': '光束', '11': '平台项目'
             }
+            sml_map = {'0': 'SS', '1': 'S', '2': 'M', '3': 'L'}
 
-            return jsonify({"status": "success", "data": project_details})
+            # 组装返回的任务详情数据
+            task_details = {
+                'projectId': project.id,
+                'projectName': project.measures_project,
+                'department': person.person_department if person else '',
+                'brand': brand_map.get(project.brand, project.brand),
+                'scale': sml_map.get(project.sml, project.sml),
+                'status': status_map.get(project.measure_status, project.measure_status),
+                'calculator': person.person if person else '',
+                'createdAt': project.create_time.strftime('%Y-%m-%d %H:%M:%S') if project.create_time else '',
+                'updatedAt': project.update_time.strftime('%Y-%m-%d %H:%M:%S') if project.update_time else '',
+                'orderInfo': order_info,
+                'powerConfig': power_configs
+            }
+            return jsonify(data=task_details)
         except Exception as e:
-            print(f"Error in get_task_details: {e}")
-            return jsonify({"status": "error", "message": "Internal server error"}), 500
+            print(f"获取任务详情时出错: {e}")
+            return jsonify(error="获取任务详情失败", message=str(e)), 500
 
     def get_historical_projects(self):
         """
-        获取历史测算项目列表 (measure_tag = '1')
+        获取历史测算项目列表 (measure_tag = '1')。
         """
         try:
-            # 查询历史项目及其主要负责人
-            historical_projects = db.session.query(
-                LisProject.id,
-                LisProject.name,
-                LisMeasurePerson.measure_person.label('person')
-            ).join(
-                LisMeasurePerson,
-                (LisProject.id == LisMeasurePerson.project_id) & (LisMeasurePerson.is_primary == '1')
-            ).filter(LisProject.measure_tag == '1').all()
+            # 查询已完成的项目
+            historical_projects = db.session.query(LisProject).filter(LisProject.measure_tag == '1').all()
+            
+            history_list = []
+            for project in historical_projects:
+                # 为每个历史项目找到其主要负责人
+                person = db.session.query(LisMeasurePerson).filter(
+                    LisMeasurePerson.project_id == str(project.id)
+                ).order_by(LisMeasurePerson.id.asc()).first()
 
-            projects = [{
-                'id': p.id,
-                'name': p.name,
-                'person': p.person,
-            } for p in historical_projects]
-
-            return jsonify({"status": "success", "data": projects})
+                history_list.append({
+                    'id': project.id,
+                    'name': project.measures_project,
+                    'department': person.person_department if person else '',
+                    'calculator': person.person if person else 'N/A',
+                    'brand': project.brand, # 注意: 此处 brand 是ID，可在前端或后端进行映射
+                    'spec': project.sml,    # 注意: 此处 spec 是ID
+                })
+            
+            return jsonify(data=history_list)
         except Exception as e:
-            print(f"Error in get_historical_projects: {e}")
-            return jsonify({"status": "error", "message": str(e)}), 500
+            print(f"获取历史项目时出错: {e}")
+            return jsonify(error="获取历史项目失败", message=str(e)), 500
 
     def get_all_persons(self):
         """
         获取所有唯一的接口人及其所属部门列表。
-        如果一个接口人属于多个部门，部门名称会用逗号拼接。
+        使用人员姓名(`person`)作为唯一标识，并聚合其所属的所有部门。
         """
         try:
-            # 使用 GROUP_CONCAT 来聚合部门名称
-            persons_from_db = db.session.query(
-                LisMeasurePerson.measure_person_id,
-                LisMeasurePerson.measure_person,
-                func.group_concat(BsBasicCenterHr.dept_name.distinct()).label('departments')
-            ).join(
-                BsBasicCenterHr, LisMeasurePerson.measure_dept_id == BsBasicCenterHr.id
+            # 在数据库层面使用 GROUP_CONCAT 聚合部门名称，并按人员姓名分组
+            persons_query = db.session.query(
+                LisMeasurePerson.person,
+                func.group_concat(BsBasicCenterHr.department_name.distinct()).label('departments')
+            ).outerjoin(  # 使用 outerjoin 确保没有部门信息的人员也能被查询到
+                BsBasicCenterHr,
+                LisMeasurePerson.person_department == BsBasicCenterHr.department_id
+            ).filter(
+                LisMeasurePerson.person.isnot(None),  # 过滤掉姓名为空的记录
+                LisMeasurePerson.person != ''
             ).group_by(
-                LisMeasurePerson.measure_person_id,
-                LisMeasurePerson.measure_person
+                LisMeasurePerson.person
             ).all()
 
-            persons = [{
-                'id': p.measure_person_id,
-                'name': p.measure_person,
-                'department': p.departments
-            } for p in persons_from_db]
-
-            return jsonify({"status": "success", "data": persons})
+            person_list = [
+                {
+                    "id": p.person,  # 使用 person 姓名作为唯一ID
+                    "name": p.person,
+                    "department": p.departments if p.departments else 'N/A'  # 如果没有部门信息，则显示'N/A'
+                }
+                for p in persons_query
+            ]
+            
+            return jsonify(data=person_list)
         except Exception as e:
-            print(f"Error in get_all_persons: {e}")
-            return jsonify({"status": "error", "message": "Internal server error"}), 500
+            print(f"获取人员列表时出错: {e}")
+            return jsonify(error="获取人员列表失败", message=str(e)), 500
 
     def handle_chat(self, data):
         """
         处理聊天请求，调用AI服务并以流式响应返回结果。
         """
-        # 动态导入以避免循环依赖
         from app.app import ai_service
         user_message = data.get('message')
         if not user_message:
-            return jsonify({"status": "error", "message": "Message is required"}), 400
-
-        # AI服务的系统提示
+            return jsonify(error="未提供消息"), 400
+        
+        # 为AI服务设置系统提示
         system_prompt = "你是一个测算专家，请根据用户的问题给出解答。保证回答尽量简洁"
-
+        
+        # 使用生成器函数进行流式响应
         def generate():
-            """生成器函数，用于流式传输AI的响应"""
-            try:
-                for chunk in ai_service.get_streaming_chat_completion(user_message, system_prompt=system_prompt):
-                    yield chunk
-            except Exception as e:
-                print(f"Error during streaming chat completion: {e}")
-                yield "AI服务出错，请稍后重试。"
-
-        # 返回一个流式响应
+            for chunk in ai_service.get_streaming_chat_completion(user_message, system_prompt=system_prompt):
+                yield chunk
+        
         return Response(generate(), mimetype='text/plain')
+
+    def generate_calculation(self, data):
+        """
+        生成测算表的函数（待实现）。
+        """
+        # TODO: 实现测算生成逻辑
+        task_id = data.get('task_id')
+        reference_project_id = data.get('reference_project_id')
+        mock_timesheet = [
+            {"person": "Dev 1", "hours": 40},
+            {"person": "Dev 2", "hours": 32},
+        ]
+        return jsonify(data={"calculation_id": "calc-123", "timesheet": mock_timesheet})
+
+    def modify_calculation(self, data):
+        """
+        根据自然语言指令修改测算表的函数（待实现）。
+        """
+        # TODO: 实现基于自然语言指令的测算修改逻辑
+        command = data.get('command')
+        current_timesheet = data.get('current_timesheet')
+        # 模拟修改操作
+        if "add" in command:
+            current_timesheet.append({"person": "New Dev", "hours": 20})
+        
+        return jsonify(data={"updated_timesheet": current_timesheet})
+
+    def validate_calculation(self, data):
+        """
+        验证测算表的函数（待实现）。
+        """
+        # TODO: 实现验证逻辑
+        timesheet = data.get('timesheet')
+        is_valid = all(isinstance(entry.get('hours', 0), int) and entry.get('hours', 0) > 0 for entry in timesheet)
+        errors = [] if is_valid else ["发现无效的工时。"]
+        return jsonify(data={"is_valid": is_valid, "errors": errors})
+
+    def submit_task(self, task_id, data):
+        """
+        提交任务的函数（待实现）。
+        """
+        # TODO: 实现提交逻辑
+        timesheet = data.get('timesheet')
+        print(f"正在为任务 {task_id} 提交工时表: {timesheet}")
+        return jsonify(data={"status": "success"})
