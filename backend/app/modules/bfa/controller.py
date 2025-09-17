@@ -115,26 +115,39 @@ class BfaController:
         """
         获取历史测算项目列表 (measure_tag = '1')。
         """
+        # 品牌和开发规模的映射关系
+        brand_map = {
+            '1': 'WEY', '2': '坦克', '3': '沙龙', '4': '哈弗', '5': '欧拉',
+            '6': '皮卡', '7': 'HEM', '8': '重卡', '9': '赛车', '10': '光束', '11': '平台项目'
+        }
+        sml_map = {'0': 'SS', '1': 'S', '2': 'M', '3': 'L'}
         try:
             # 查询已完成的项目
-            historical_projects = db.session.query(LisProject).filter(LisProject.measure_tag == '1').all()
-            
+            historical_projects = db.session.query(LisProject).filter(LisProject.measure_status == '4').all()
             history_list = []
             for project in historical_projects:
                 # 为每个历史项目找到其主要负责人
                 person = db.session.query(LisMeasurePerson).filter(
                     LisMeasurePerson.project_id == str(project.id)
                 ).order_by(LisMeasurePerson.id.asc()).first()
-
+ 
+                department_name = person.person_department if person else ''
+                if person and person.person_department:
+                    # 查询部门名称，使用 .first() 避免因重复ID导致 .scalar() 报错
+                    department_result = db.session.query(BsBasicCenterHr.department_name).filter(
+                        BsBasicCenterHr.department_id == person.person_department
+                    ).first()
+                    if department_result:
+                        department_name = department_result[0]
+ 
                 history_list.append({
                     'id': project.id,
                     'name': project.measures_project,
-                    'department': person.person_department if person else '',
+                    'department': department_name,
                     'calculator': person.person if person else 'N/A',
-                    'brand': project.brand, # 注意: 此处 brand 是ID，可在前端或后端进行映射
-                    'spec': project.sml,    # 注意: 此处 spec 是ID
+                    'brand': brand_map.get(project.brand, project.brand), # 直接返回映射后的文本
+                    'spec': sml_map.get(project.sml, project.sml),      # 直接返回映射后的文本
                 })
-            
             return jsonify(data=history_list)
         except Exception as e:
             print(f"获取历史项目时出错: {e}")

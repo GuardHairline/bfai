@@ -182,6 +182,9 @@ const App = () => {
         title: `${selectedTask.name} - ${new Date().toLocaleString()}`,
         baseline: baselineNames,
         baselineIds: [...selectedBaselineIds],
+        // 添加渲染侧边栏所需的其他字段
+        name: selectedTask.name, 
+        calculator: loggedInUser ? loggedInUser.name : 'N/A',
       },
     ]);
     message.success('测算结果已提交');
@@ -200,25 +203,33 @@ const App = () => {
    * 将渲染任务委托给相应的组件。
    */
   const contentRender = (item, dom, defaultDom) => {
-    // 自定义渲染助手消息，以处理思考和回复
-    if (item?.originData?.role === 'assistant' && typeof item.content === 'object' && item.content !== null) {
+    const role = item?.role;
+
+    if (role === 'assistant' && typeof item.content === 'string') {
+      const content = item.content || '';
+      // 使用正则表达式分割内容，捕获<think>标签块
+      const parts = content.split(/(<think>.*?<\/think>)/gs).filter(Boolean);
+
       return (
         <div style={{ whiteSpace: 'pre-wrap' }}>
-          {item.content.thinking && (
-            <span style={{ color: '#aaa', fontStyle: 'italic' }}>
-              {item.content.thinking}
-            </span>
-          )}
-          {item.content.reply && (
-            <span>
-              {item.content.reply}
-            </span>
-          )}
+          {parts.map((part, index) => {
+            if (part.startsWith('<think>')) {
+              // 提取并渲染“思考”内容
+              const thinkingText = part.substring(7, part.length - 8);
+              return (
+                <span key={index} style={{ color: '#aaa', fontStyle: 'italic' }}>
+                  {thinkingText}
+                </span>
+              );
+            }
+            // 渲染正常回复内容
+            return <span key={index}>{part}</span>;
+          })}
         </div>
       );
     }
 
-    const role = item?.originData?.role;
+    // 处理所有其他自定义角色
     switch (role) {
       case 'task-list':
         // 为列表中的每个项目使用唯一的key以避免React警告
@@ -262,105 +273,17 @@ const App = () => {
       case 'measurement-entry':
         return <MeasurementEntry onStart={handleStartMeasurement} />;
       default:
+        // 此处用于渲染用户消息等其他默认情况
         return defaultDom;
     }
   };
 
   /**
-   * 处理聊天更新。当最后一条消息来自用户时，
-   * 向AI后端请求回复，并以流式方式更新UI。
+   * 当聊天记录发生变化时，仅更新状态。
+   * 所有的请求逻辑都已移至 ProChat 的 `request` 属性中。
    */
-  const onChatsChange = async (newChats) => {
-    const last = newChats[newChats.length - 1];
+  const onChatsChange = (newChats) => {
     setChats(newChats);
-
-    if (last && last.role === 'user') {
-      const assistantMessageId = `${Date.now()}-assistant`;
-      // 为助手的响应添加一个占位符，其中包含一个复杂的内容对象
-      pushMessages([{ id: assistantMessageId, role: 'assistant', content: { thinking: '', reply: '' } }]);
-
-      try {
-        const response = await fetch('/api/v1/bfa/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: last.content }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let isThinking = false;
-
-        setChats(prev => prev.map(chat =>
-          chat.id === assistantMessageId ? { ...chat, content: '' } : chat
-        ));
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          
-          buffer += decoder.decode(value, { stream: true });
-
-          const processBuffer = () => {
-            if (!isThinking) {
-              const thinkStart = buffer.indexOf('<think>');
-              if (thinkStart === -1) {
-                updateContent(assistantMessageId, buffer, 'reply');
-                buffer = '';
-                return;
-              }
-              
-              const beforeThink = buffer.substring(0, thinkStart);
-              updateContent(assistantMessageId, beforeThink, 'reply');
-              buffer = buffer.substring(thinkStart + 7);
-              isThinking = true;
-            }
-
-            if (isThinking) {
-              const thinkEnd = buffer.indexOf('</think>');
-              if (thinkEnd === -1) {
-                updateContent(assistantMessageId, buffer, 'thinking');
-                buffer = '';
-                return;
-              }
-
-              const inThink = buffer.substring(0, thinkEnd);
-              updateContent(assistantMessageId, inThink, 'thinking');
-              buffer = buffer.substring(thinkEnd + 8);
-              isThinking = false;
-            }
-            // 如果缓冲区中还有更多内容，则再次处理
-            if(buffer.length > 0) processBuffer();
-          };
-
-          processBuffer();
-        }
-      } catch (error) {
-        console.error("Failed to get chat reply:", error);
-        message.error("获取AI回复失败");
-        setChats(prev => prev.map(chat =>
-          chat.id === assistantMessageId ? { ...chat, content: '获取回复失败，请重试。' } : chat
-        ));
-      }
-    }
-  };
-
-  /**
-   * 辅助函数，用于更新特定聊天消息的内容。
-   */
-  const updateContent = (id, chunk, part) => {
-    setChats(prev => prev.map(chat => {
-      if (chat.id === id) {
-        const newContent = { ...chat.content };
-        newContent[part] = (newContent[part] || '') + chunk;
-        return { ...chat, content: newContent };
-      }
-      return chat;
-    }));
   };
 
   /**
@@ -371,6 +294,29 @@ const App = () => {
     startNewConversation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedInUser]);
+
+  /**
+   * 组件挂载时获取一次历史测算记录
+   */
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const response = await fetch('/api/v1/bfa/history');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const result = await response.json();
+        // 注意：这里我们直接使用 setMeasurementHistory 更新状态
+        // 而不是之前错误的 setHistoricalProjects
+        setMeasurementHistory(result.data || []);
+      } catch (error) {
+        console.error("Failed to fetch history:", error);
+        message.error("获取测算历史失败");
+      }
+    };
+
+    fetchHistory();
+  }, []);
 
   /**
    * 用户在新对话中点击“财务测算”开始按钮时，
@@ -490,6 +436,27 @@ const App = () => {
               chats={chats}
               onChatsChange={onChatsChange}
               contentRender={contentRender}
+              request={async (messages) => {
+                const lastUserMessage = messages[messages.length - 1];
+                try {
+                  const response = await fetch('/api/v1/bfa/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: lastUserMessage.content }),
+                  });
+
+                  if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                  }
+                  
+                  // ProChat 可以直接处理流式响应
+                  return response;
+                } catch (error) {
+                  message.error("获取AI回复失败");
+                  // 返回一个包含错误信息的响应
+                  return new Response("获取回复失败，请重试。");
+                }
+              }}
             />
           </ProCard>
         </Content>
