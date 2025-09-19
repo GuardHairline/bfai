@@ -9,9 +9,11 @@ const handleResponse = async (response) => {
   return response.json();
 };
 
-export const fetchTaskDetails = async (taskId) => {
+export const fetchTaskDetails = async (taskInfo) => {
   try {
-    const response = await fetch(`/api/v1/bfa/tasks/${taskId}`);
+    const { taskId, personId, departmentId } = taskInfo;
+    const url = `/api/v1/bfa/tasks/${taskId}?person_id=${personId}&department_id=${departmentId}`;
+    const response = await fetch(url);
     const result = await handleResponse(response);
     return result.data;
   } catch (error) {

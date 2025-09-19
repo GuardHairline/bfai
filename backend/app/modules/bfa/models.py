@@ -73,3 +73,14 @@ class BsBasicCenterHr(db.Model):
     center_department_id = db.Column(db.String(100))
     center_department_name = db.Column(db.String(100))
     is_need_set_center = db.Column(db.String(100))
+
+class PmSheetControl(db.Model):
+    __tablename__ = 'pm_sheet_control'
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    create_by = db.Column(db.BigInteger)
+    create_time = db.Column(db.DateTime)
+    update_by = db.Column(db.BigInteger)
+    update_time = db.Column(db.DateTime)
+    pm_department = db.Column(db.String(100))
+    see_sheet = db.Column(db.String(32))

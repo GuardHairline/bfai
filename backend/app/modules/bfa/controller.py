@@ -1,5 +1,5 @@
 from flask import jsonify, request, Response
-from .models import LisProject, LisMeasurePerson, LisProjectOrder, BsBasicCenterHr
+from .models import LisProject, LisMeasurePerson, LisProjectOrder, BsBasicCenterHr, PmSheetControl
 from app.db.db import db
 from sqlalchemy import cast, func, String
 
@@ -50,13 +50,14 @@ class BfaController:
             # 格式化查询结果
             task_list = [
                 {
-                    'id': project.id,
+                    'id': str(project.id),
                     'name': project.measures_project,
                     'department': department_name if department_name else person.person_department,
+                    'department_id': person.person_department,
                     'calculator': person.person,
                     'brand': brand_map.get(project.brand, project.brand),
                     'spec': sml_map.get(project.sml, project.sml),
-                    'task_person_id': person.id
+                    'task_person_id': str(person.id)
                 }
                 for person, project, department_name in user_tasks
             ]
@@ -68,43 +69,72 @@ class BfaController:
 
     def get_task_details(self, task_id):
         """
-        根据任务ID获取项目的详细信息。
+        根据任务ID、人员ID和部门ID获取唯一的项目详细信息，并附加部门权限。
         """
         try:
-            # 查询项目详情
-            project = db.session.query(LisProject).filter(LisProject.id == int(task_id)).one_or_none()
-            if not project:
-                return jsonify(error="任务未找到"), 404
+            person_id = request.args.get('person_id')
+            department_id = request.args.get('department_id')
+
+            if not all([person_id, department_id]):
+                return jsonify(error="必须提供 person_id 和 department_id"), 400
+
+            # 映射关系
+            status_map = {'0': '编制中', '1': '测算中', '2': '财务汇总中', '3': '财务审批中', '4': '测算完成', '10': '已作废'}
+            brand_map = {'1': 'WEY', '2': '坦克', '3': '沙龙', '4': '哈弗', '5': '欧拉', '6': '皮卡', '7': 'HEM', '8': '重卡', '9': '赛车', '10': '光束', '11': '平台项目'}
+            sml_map = {'0': 'SS', '1': 'S', '2': 'M', '3': 'L'}
+
+            # 基于三个唯一标识符进行精确查询
+            query_result = db.session.query(
+                LisProject,
+                LisMeasurePerson,
+                BsBasicCenterHr.department_name
+            ).join(
+                LisProject,
+                cast(LisProject.id, String(32)).collate('utf8mb4_general_ci') == LisMeasurePerson.project_id
+            ).outerjoin(
+                BsBasicCenterHr,
+                LisMeasurePerson.person_department == BsBasicCenterHr.department_id
+            ).filter(
+                LisMeasurePerson.project_id == str(task_id),
+                LisMeasurePerson.person == person_id,
+                LisMeasurePerson.person_department == department_id
+            ).one_or_none()
+
+            if not query_result:
+                return jsonify(error="指定的任务未找到"), 404
+
+            project, person, department_name = query_result
             
             # 查询关联的订单，以聚合动力配置和订单信息
             orders = db.session.query(LisProjectOrder).filter(LisProjectOrder.project_id == str(task_id)).all()
-            power_configs = ",".join([order.power_conf for order in orders if order.power_conf])
-            order_info = ",".join([order.order_name for order in orders if order.order_name])
+            power_configs = ",".join(list(set([order.power_conf for order in orders if order.power_conf])))
+            order_info = ",".join(list(set([order.order_name for order in orders if order.order_name])))
 
-            # 查询项目的主要负责人
-            person = db.session.query(LisMeasurePerson).filter(LisMeasurePerson.project_id == str(task_id)).order_by(LisMeasurePerson.id.asc()).first()
-
-            # 用于状态、品牌和规模的ID到文本映射
-            status_map = {'0': '编制中', '1': '测算中', '2': '财务汇总中', '3': '财务审批中', '4': '测算完成', '10': '已作废'}
-            brand_map = {
-                '1': 'WEY', '2': '坦克', '3': '沙龙', '4': '哈弗', '5': '欧拉',
-                '6': '皮卡', '7': 'HEM', '8': '重卡', '9': '赛车', '10': '光束', '11': '平台项目'
-            }
-            sml_map = {'0': 'SS', '1': 'S', '2': 'M', '3': 'L'}
+            # 根据部门ID查询可见表权限
+            visible_sheets = []
+            if person and person.person_department:
+                sheets = db.session.query(PmSheetControl.see_sheet).filter(
+                    PmSheetControl.pm_department == person.person_department
+                ).all()
+                visible_sheets = [sheet[0] for sheet in sheets]
 
             # 组装返回的任务详情数据
             task_details = {
-                'projectId': project.id,
+                'projectId': str(project.id),
                 'projectName': project.measures_project,
-                'department': person.person_department if person else '',
+                'department': department_name or person.person_department,
                 'brand': brand_map.get(project.brand, project.brand),
                 'scale': sml_map.get(project.sml, project.sml),
                 'status': status_map.get(project.measure_status, project.measure_status),
-                'calculator': person.person if person else '',
+                'calculator': person.person,
                 'createdAt': project.create_time.strftime('%Y-%m-%d %H:%M:%S') if project.create_time else '',
                 'updatedAt': project.update_time.strftime('%Y-%m-%d %H:%M:%S') if project.update_time else '',
                 'orderInfo': order_info,
-                'powerConfig': power_configs
+                'powerConfig': power_configs,
+                'permissions': {
+                    'departmentId': person.person_department,
+                    'visible_sheets': visible_sheets
+                }
             }
             return jsonify(data=task_details)
         except Exception as e:
@@ -141,7 +171,7 @@ class BfaController:
                         department_name = department_result[0]
  
                 history_list.append({
-                    'id': project.id,
+                    'id': str(project.id),
                     'name': project.measures_project,
                     'department': department_name,
                     'calculator': person.person if person else 'N/A',

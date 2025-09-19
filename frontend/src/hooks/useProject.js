@@ -7,6 +7,7 @@ export const useProject = (pushMessages) => {
   const [projectDetails, setProjectDetails] = useState(null);
   const [historicalProjects, setHistoricalProjects] = useState([]);
   const [measurementHistory, setMeasurementHistory] = useState([]);
+  const [taskDetailsVisible, setTaskDetailsVisible] = useState(false);
 
   const fetchTasks = useCallback(async (loggedInUser) => {
     try {
@@ -25,23 +26,35 @@ export const useProject = (pushMessages) => {
 
   const handleSelectTask = useCallback(async (task) => {
     setSelectedTask(task);
-    // Reset subsequent selections
-    // setCurrentStrategy(null);
-    // setSelectedBaselineIds([]);
-    // setBaselineSelectionMode(false);
+    setTaskDetailsVisible(false); // 重置状态
     
     try {
-      const [details, history] = await Promise.all([
-        apiFetchTaskDetails(task.id),
-        apiFetchHistory()
+      const taskInfo = {
+        taskId: task.id,
+        personId: task.calculator,
+        departmentId: task.department_id
+      };
+      const details = await apiFetchTaskDetails(taskInfo);
+      setProjectDetails(details);
+      setTaskDetailsVisible(true); // 显示详情
+
+      // 不再自动推送下一步，等待用户操作
+      pushMessages([
+        { role: 'assistant', content: `已选择项目：${task.name}。以下为该项目详细信息：` },
+        { role: 'task-details', content: null },
       ]);
 
-      setProjectDetails(details);
+    } catch (error) {
+      // Errors are handled in the api service.
+    }
+  }, [pushMessages]);
+
+  const continueToMeasurement = useCallback(async () => {
+    try {
+      const history = await apiFetchHistory();
       setHistoricalProjects(history || []);
       
       pushMessages([
-        { role: 'assistant', content: `已选择项目：${task.name}。以下为该项目基础信息：` },
-        { role: 'project-info', content: null },
         {
           role: 'assistant',
           content: '以下为历史测算参考列表：请点击对应行的“参考并测算”按钮引用历史策略。',
@@ -49,7 +62,7 @@ export const useProject = (pushMessages) => {
         { role: 'history-table', content: null },
       ]);
     } catch (error) {
-      // Errors are handled in the api service.
+        // Errors are handled in the api service
     }
   }, [pushMessages]);
 
@@ -75,5 +88,7 @@ export const useProject = (pushMessages) => {
     fetchTasks,
     handleSelectTask,
     setSelectedTask,
+    taskDetailsVisible,
+    continueToMeasurement,
   };
 };
