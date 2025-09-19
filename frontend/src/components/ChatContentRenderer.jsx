@@ -8,6 +8,7 @@ import BaselineList from './BaselineList';
 import BaselineDetails from './BaselineDetails';
 import BaselineHistoryDetails from './BaselineHistoryDetails';
 import MeasurementEntry from './MeasurementEntry';
+import TaskDetails from './TaskDetails';
 import { sampleBaseline } from '../data/sampleData';
 
 const ChatContentRenderer = ({
@@ -25,6 +26,7 @@ const ChatContentRenderer = ({
   handleConfirmBaselines,
   handleSubmitMeasurement,
   handleStartMeasurement,
+  continueToMeasurement,
 }) => {
   if (item?.originData?.role === 'assistant' && typeof item.content === 'object' && item.content !== null) {
     return (
@@ -42,13 +44,18 @@ const ChatContentRenderer = ({
   const role = item?.originData?.role;
   switch (role) {
     case 'task-list':
-      const tasksWithUniqueKeys = tasks.map(t => ({ ...t, key: t.task_person_id }));
+      const tasksWithUniqueKeys = tasks.map(t => ({ 
+        ...t, 
+        key: t.task_person_id
+      }));
       return <TaskList tasks={tasksWithUniqueKeys} onSelect={(task) => {
         handleSelectTask(task);
         setConversationHistory(prev => [...prev, { title: task.name, timestamp: new Date().toLocaleString() }]);
       }} />;
     case 'history-table':
       return <HistoryTable history={historicalProjects} onReference={() => { /* Implement later */ }} />;
+    case 'task-details':
+      return <TaskDetails details={projectDetails} onContinue={continueToMeasurement} />;
     case 'project-info':
       return <ProjectInfo project={projectDetails} />;
     case 'strategy-list':

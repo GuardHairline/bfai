@@ -54,6 +54,7 @@ const App = () => {
     fetchTasks,
     handleSelectTask,
     setSelectedTask,
+    continueToMeasurement,
   } = useProject(pushMessages);
   
   const [selectedBaselineIds, setSelectedBaselineIds] = useState([]);
@@ -110,6 +111,7 @@ const App = () => {
       handleConfirmBaselines={handleConfirmBaselines}
       handleSubmitMeasurement={handleSubmitMeasurement}
       handleStartMeasurement={handleStartMeasurement}
+      continueToMeasurement={continueToMeasurement}
     />
   );
 
