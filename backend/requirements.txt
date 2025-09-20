@@ -1,0 +1,7 @@
+Flask
+Flask-SQLAlchemy
+PyMySQL
+flasgger
+openai
+Werkzeug
+httpx==0.25.0
