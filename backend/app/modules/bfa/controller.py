@@ -280,3 +280,66 @@ class BfaController:
         timesheet = data.get('timesheet')
         print(f"正在为任务 {task_id} 提交工时表: {timesheet}")
         return jsonify(data={"status": "success"})
+
+    def get_reference_projects(self, task_id, department_id):
+        """
+        获取指定部门的历史参考项目列表, 每个项目只返回一个主要的测算人。
+        """
+        if not department_id:
+            return jsonify(error="必须提供 department_id"), 400
+
+        brand_map = {
+            '1': 'WEY', '2': '坦克', '3': '沙龙', '4': '哈弗', '5': '欧拉',
+            '6': '皮卡', '7': 'HEM', '8': '重卡', '9': '赛车', '10': '光束', '11': '平台项目'
+        }
+        sml_map = {'0': 'SS', '1': 'S', '2': 'M', '3': 'L'}
+
+        try:
+            # 创建一个子查询，为每个项目找到ID最小的测算人记录，以确保唯一性
+            # 这样可以避免同一个项目因为有多个测算人而出现重复
+            first_person_subq = db.session.query(
+                LisMeasurePerson.project_id,
+                func.min(LisMeasurePerson.id).label('min_person_id')
+            ).group_by(LisMeasurePerson.project_id).subquery()
+
+            # 主查询，获取项目信息
+            query = db.session.query(
+                LisProject,
+                LisMeasurePerson,
+                BsBasicCenterHr.department_name
+            ).join(
+                first_person_subq,
+                cast(LisProject.id, String(32)).collate('utf8mb4_general_ci') == first_person_subq.c.project_id
+            ).join(
+                LisMeasurePerson,
+                db.and_(
+                    LisMeasurePerson.project_id == first_person_subq.c.project_id,
+                    LisMeasurePerson.id == first_person_subq.c.min_person_id
+                )
+            ).join(
+                BsBasicCenterHr,
+                LisMeasurePerson.person_department == BsBasicCenterHr.department_id
+            ).filter(
+                LisProject.measure_status == '4',
+                LisMeasurePerson.person_department == department_id,
+                cast(LisProject.id, String(32)) != task_id
+            )
+
+            results = query.all()
+
+            project_list = [
+                {
+                    'id': str(project.id),
+                    'projectName': project.measures_project,
+                    'department': department_name,
+                    'calculator': person.person,
+                    'brand': brand_map.get(project.brand, project.brand),
+                    'spec': sml_map.get(project.sml, project.sml),
+                }
+                for project, person, department_name in results
+            ]
+
+            return jsonify(data=project_list)
+        except Exception as e:
+            print(f"获取参考项目列表时出错: {e}")
+            return jsonify(error="获取参考项目列表失败", message=str(e)), 500

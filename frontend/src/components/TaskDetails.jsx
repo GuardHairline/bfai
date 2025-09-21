@@ -1,7 +1,13 @@
 import React from 'react';
-import { Table, Button, Card } from 'antd';
+import { Table, Card } from 'antd';
+import { useReferenceProjects } from '../hooks/useReferenceProjects';
+import ReferenceProjects from './ReferenceProjects';
 
-const TaskDetails = ({ details, onContinue }) => {
+const TaskDetails = ({ details }) => {
+  const taskId = details ? details.projectId : null;
+  const departmentId = details ? details.permissions.departmentId : null;
+  const { projects, loading } = useReferenceProjects(taskId, departmentId);
+
   if (!details) {
     return <Card bordered={false}>加载任务详情中...</Card>;
   }
@@ -42,22 +48,20 @@ const TaskDetails = ({ details, onContinue }) => {
   ];
 
   return (
-    <Card bordered={false} bodyStyle={{ padding: 0 }}>
-      <Table
-        columns={columns}
-        dataSource={data}
-        pagination={false}
-        bordered
-        showHeader={false}
-        size="small"
-        style={{ width: '100%', minWidth: '500px' }}
-      />
-      <div style={{ marginTop: 24, textAlign: 'right' }}>
-        <Button type="primary" onClick={onContinue}>
-          继续测算
-        </Button>
-      </div>
-    </Card>
+    <div style={{ width: '100%' }}>
+      <Card bordered={false} bodyStyle={{ padding: 0 }}>
+        <Table
+          columns={columns}
+          dataSource={data}
+          pagination={false}
+          bordered
+          showHeader={false}
+          size="small"
+          style={{ width: '100%', minWidth: '500px' }}
+        />
+      </Card>
+      <ReferenceProjects projects={projects} loading={loading} />
+    </div>
   );
 };
 

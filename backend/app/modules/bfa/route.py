@@ -48,3 +48,8 @@ def validate_calculation():
 def submit_task(task_id):
     data = request.get_json()
     return bfa_controller.submit_task(task_id, data)
+
+@bfa_bp.route('/tasks/<string:task_id>/reference-projects', methods=['GET'])
+def get_reference_projects(task_id):
+    department_id = request.args.get('department_id')
+    return bfa_controller.get_reference_projects(task_id, department_id)
