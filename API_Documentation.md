@@ -76,6 +76,8 @@
 -   **描述**: 根据任务 ID 获取该任务的详细基础信息。
 -   **URL Parameters**:
     -   `task_id` (required, string/integer): 任务的唯一标识符。
+    -   `person_id` (required, string): 执行测算的人员 ID。
+    -   `department_id` (required, string): 人员所属的部门 ID。
 -   **Request Body**: 无
 -   **Success Response (200 OK)**:
     ```json
@@ -86,8 +88,40 @@
         "name": "项目A - 2025年度预算测算",
         "creator": "王五",
         "create_time": "2025-09-01",
-        "details": "..."
+        "details": "...",
+        "powerConfig": "Electric",
+        "permissions": {
+          "departmentId": "D001",
+          "visible_sheets": ["sheet1", "sheet2"]
+        }
       }
+    }
+    ```
+
+### 获取同部门的历史参考项目
+
+-   **Endpoint**: `/tasks/<string:task_id>/reference-projects`
+-   **Method**: `GET`
+-   **描述**: 获取与当前测算任务相同部门的、已完成的历史项目列表，用于在测算时提供参考。
+-   **URL Parameters**:
+    -   `task_id` (required, string): 当前任务的唯一标识符。
+-   **Query Parameters**:
+    -   `department_id` (required, string): 当前测算任务的部门 ID。
+-   **Request Body**: 无
+-   **Success Response (200 OK)**:
+    ```json
+    {
+      "status": "success",
+      "data": [
+        {
+          "id": "102",
+          "projectName": "项目C - 历史测算",
+          "department": "研发一部",
+          "calculator": "李四",
+          "brand": "坦克",
+          "spec": "S"
+        }
+      ]
     }
     ```
 
@@ -95,7 +129,7 @@
 
 ## 3. 历史记录
 
-### 获取通用历史测算项目
+### 获取通用历史测算项目列表
 
 -   **Endpoint**: `/history`
 -   **Method**: `GET`
@@ -116,14 +150,38 @@
     }
     ```
 
-### (已定义但前端未使用) 获取特定任务的历史参考
+### 获取历史项目测算详情
 
--   **Endpoint**: `/tasks/<task_id>/historical-projects`
+-   **Endpoint**: `/history/<string:project_id>/details`
 -   **Method**: `GET`
--   **描述**: 根据任务 ID，获取与该任务相关的、更具针对性的历史参考项目列表。
+-   **描述**: 根据历史项目的 ID，获取其详细的、包含所有动态月份工时投入的测算数据。
 -   **URL Parameters**:
-    -   `task_id` (required, integer): 任务的唯一标识符。
+    -   `project_id` (required, string): 历史项目的唯一标识符。
 -   **Request Body**: 无
+-   **Success Response (200 OK)**:
+    ```json
+    {
+      "status": "success",
+      "data": {
+        "table_data": [
+          {
+            "id": 1,
+            "序号": 1,
+            "动力配置": "Hybrid",
+            "一级任务": "",
+            "改动类型": "",
+            "定义范围": "",
+            "具体事项": "完成电池包的设计与测试",
+            "基准工时": 120.5,
+            "填报总工时": 150.0,
+            "202507": 50.0,
+            "202508": 100.0
+          }
+        ],
+        "dynamic_columns": ["202507", "202508"]
+      }
+    }
+    ```
 
 ---
 
