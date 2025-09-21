@@ -9,7 +9,6 @@ import BaselineDetails from './BaselineDetails';
 import BaselineHistoryDetails from './BaselineHistoryDetails';
 import MeasurementEntry from './MeasurementEntry';
 import TaskDetails from './TaskDetails';
-import { sampleBaseline } from '../data/sampleData';
 
 const ChatContentRenderer = ({
   item,
@@ -28,6 +27,8 @@ const ChatContentRenderer = ({
   handleStartMeasurement,
   continueToMeasurement,
 }) => {
+  // The logic for displaying historical details has been moved to App.js
+  
   if (item?.originData?.role === 'assistant' && typeof item.content === 'object' && item.content !== null) {
     return (
       <div style={{ whiteSpace: 'pre-wrap' }}>
@@ -55,15 +56,15 @@ const ChatContentRenderer = ({
     case 'history-table':
       return <HistoryTable history={historicalProjects} onReference={() => { /* Implement later */ }} />;
     case 'task-details':
-      return <TaskDetails details={projectDetails} onContinue={continueToMeasurement} />;
+      return <TaskDetails details={projectDetails} />;
     case 'project-info':
       return <ProjectInfo project={projectDetails} />;
     case 'strategy-list':
       return <StrategyList strategies={[]} onSelect={handleSelectStrategy} currentStrategy={currentStrategy} />;
     case 'baseline-list':
-      return <BaselineList baselines={sampleBaseline} selectedIds={selectedBaselineIds} onChange={setSelectedBaselineIds} onSubmit={handleConfirmBaselines} />;
+      return <BaselineList baselines={[]} selectedIds={selectedBaselineIds} onChange={setSelectedBaselineIds} onSubmit={handleConfirmBaselines} />;
     case 'baseline-details':
-      return <BaselineDetails baselineIds={selectedBaselineIds} baselines={sampleBaseline} onSubmit={handleSubmitMeasurement} />;
+      return <BaselineDetails baselineIds={selectedBaselineIds} baselines={[]} onSubmit={handleSubmitMeasurement} />;
     case 'baseline-history-details':
       return <BaselineHistoryDetails baselineIds={item.baselineIds || []} />;
     case 'measurement-entry':
