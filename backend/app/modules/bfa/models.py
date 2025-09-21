@@ -84,3 +84,45 @@ class PmSheetControl(db.Model):
     update_time = db.Column(db.DateTime)
     pm_department = db.Column(db.String(100))
     see_sheet = db.Column(db.String(32))
+
+class PmWorkHours(db.Model):
+    __tablename__ = 'pm_work_hours'
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    create_by = db.Column(db.BigInteger)
+    create_time = db.Column(db.DateTime)
+    update_by = db.Column(db.BigInteger)
+    update_time = db.Column(db.DateTime)
+    base_hours = db.Column(db.Numeric(32))
+    select_hours_base = db.Column(db.BigInteger)
+    budget_sum = db.Column(db.Numeric(32))
+    diff_hour = db.Column(db.Numeric(32))
+    diff_reason = db.Column(db.String(2000))
+    select_order = db.Column(db.BigInteger)
+    department = db.Column(db.String(32))
+    select_project_id = db.Column(db.String(32))
+    select_tag = db.Column(db.Boolean)
+    power_conf = db.Column(db.String(200))
+    order_name = db.Column(db.String(32))
+    market = db.Column(db.String(2000))
+    business_detail = db.Column(db.String(5000))
+    delete_tag = db.Column(db.Boolean)
+    approval_tag = db.Column(db.Integer)
+    measure_method = db.Column(db.String(5000))
+    serial_number = db.Column(db.String(32))
+
+class PmMonthHoursDetail(db.Model):
+    __tablename__ = 'pm_month_hours_detail'
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    create_by = db.Column(db.BigInteger)
+    create_time = db.Column(db.DateTime)
+    update_by = db.Column(db.BigInteger)
+    update_time = db.Column(db.DateTime)
+    mm = db.Column(db.Integer)
+    base_id = db.Column(db.String(32))
+    order_id = db.Column(db.String(32))
+    measure_id = db.Column(db.String(32))
+    month_input = db.Column(db.String(32))
+    select_project_id = db.Column(db.String(32))
+    department = db.Column(db.String(32))

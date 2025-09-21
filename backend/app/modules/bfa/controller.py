@@ -1,5 +1,6 @@
 from flask import jsonify, request, Response
-from .models import LisProject, LisMeasurePerson, LisProjectOrder, BsBasicCenterHr, PmSheetControl
+from .models import (LisProject, LisMeasurePerson, LisProjectOrder, BsBasicCenterHr, 
+                   PmSheetControl, PmWorkHours, PmMonthHoursDetail)
 from app.db.db import db
 from sqlalchemy import cast, func, String
 
@@ -343,3 +344,83 @@ class BfaController:
         except Exception as e:
             print(f"获取参考项目列表时出错: {e}")
             return jsonify(error="获取参考项目列表失败", message=str(e)), 500
+
+    def get_historical_project_details(self, project_id):
+        """
+        获取历史项目的详细测算数据。
+        """
+        try:
+            # 一个查询获取所有相关数据
+            query_results = db.session.query(
+                PmWorkHours.id.label('measure_id'),
+                PmWorkHours.business_detail,
+                PmWorkHours.base_hours,
+                LisProjectOrder.power_conf,
+                PmMonthHoursDetail.mm,
+                PmMonthHoursDetail.month_input
+            ).select_from(LisProjectOrder).join(
+                PmWorkHours, PmWorkHours.select_order == LisProjectOrder.id
+            ).outerjoin(
+                PmMonthHoursDetail, cast(PmWorkHours.id, String(32)).collate('utf8mb4_general_ci') == PmMonthHoursDetail.measure_id
+            ).filter(
+                LisProjectOrder.project_id == project_id
+            ).order_by(
+                PmWorkHours.id, PmMonthHoursDetail.mm
+            ).all()
+
+            if not query_results:
+                return jsonify(data={"table_data": [], "dynamic_columns": []})
+
+            # 将扁平化的结果处理成结构化数据
+            processed_data = {}
+            all_months = set()
+
+            for row in query_results:
+                measure_id = row.measure_id
+                if measure_id not in processed_data:
+                    processed_data[measure_id] = {
+                        'power_config': row.power_conf,
+                        'business_detail': row.business_detail,
+                        'base_hours': float(row.base_hours) if row.base_hours is not None else 0,
+                        'total_hours': 0,
+                        'monthly_inputs': {}
+                    }
+                
+                if row.mm and row.month_input:
+                    month_str = str(row.mm)
+                    try:
+                        month_input_val = float(row.month_input)
+                    except (ValueError, TypeError):
+                        month_input_val = 0
+                    
+                    all_months.add(month_str)
+                    processed_data[measure_id]['monthly_inputs'][month_str] = month_input_val
+                    processed_data[measure_id]['total_hours'] += month_input_val
+
+            # 格式化为最终的表格结构
+            dynamic_columns = sorted(list(all_months))
+            table_data = []
+            
+            for index, (measure_id, data) in enumerate(processed_data.items()):
+                row_data = {
+                    'id': measure_id,
+                    '序号': index + 1,
+                    '动力配置': data['power_config'],
+                    '一级任务': '',
+                    '改动类型': '',
+                    '定义范围': '',
+                    '具体事项': data['business_detail'],
+                    '基准工时': data['base_hours'],
+                    '填报总工时': data['total_hours'],
+                }
+                
+                for month in dynamic_columns:
+                    row_data[month] = data['monthly_inputs'].get(month, '')
+
+                table_data.append(row_data)
+                
+            return jsonify(data={"table_data": table_data, "dynamic_columns": dynamic_columns})
+
+        except Exception as e:
+            print(f"获取历史项目详情时出错: {e}")
+            return jsonify(error="获取历史项目详情失败", message=str(e)), 500

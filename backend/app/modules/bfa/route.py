@@ -53,3 +53,7 @@ def submit_task(task_id):
 def get_reference_projects(task_id):
     department_id = request.args.get('department_id')
     return bfa_controller.get_reference_projects(task_id, department_id)
+
+@bfa_bp.route('/history/<string:project_id>/details', methods=['GET'])
+def get_historical_project_details(project_id):
+    return bfa_controller.get_historical_project_details(project_id)

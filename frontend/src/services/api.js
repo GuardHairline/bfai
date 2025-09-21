@@ -104,3 +104,15 @@ export const fetchReferenceProjects = async (taskId, departmentId) => {
     throw error;
   }
 };
+
+export const fetchHistoricalProjectDetails = async (projectId) => {
+  try {
+    const response = await fetch(`/api/v1/bfa/history/${projectId}/details`);
+    const result = await handleResponse(response);
+    return result.data || { table_data: [], dynamic_columns: [] };
+  } catch (error) {
+    console.error("Failed to fetch historical project details:", error);
+    message.error("获取历史项目详情失败");
+    throw error;
+  }
+};
