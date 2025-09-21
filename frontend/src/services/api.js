@@ -92,3 +92,15 @@ export const streamChatResponse = async (chatMessage, onChunk, onError) => {
     }
   }
 };
+
+export const fetchReferenceProjects = async (taskId, departmentId) => {
+  try {
+    const response = await fetch(`/api/v1/bfa/tasks/${taskId}/reference-projects?department_id=${departmentId}`);
+    const result = await handleResponse(response);
+    return result.data || [];
+  } catch (error) {
+    console.error("Failed to fetch reference projects:", error);
+    message.error("获取参考项目列表失败");
+    throw error;
+  }
+};
