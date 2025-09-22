@@ -1,8 +1,8 @@
 from flask import jsonify, request, Response
 from .models import (LisProject, LisMeasurePerson, LisProjectOrder, BsBasicCenterHr, 
-                   PmSheetControl, PmWorkHours, PmMonthHoursDetail)
+                   PmSheetControl, PmWorkHours, PmMonthHoursDetail, BaHoursBasis, LisTask)
 from app.db.db import db
-from sqlalchemy import cast, func, String
+from sqlalchemy import cast, func, String, BigInteger
 
 
 class BfaController:
@@ -106,10 +106,13 @@ class BfaController:
 
             project, person, department_name = query_result
             
-            # 查询关联的订单，以聚合动力配置和订单信息
-            orders = db.session.query(LisProjectOrder).filter(LisProjectOrder.project_id == str(task_id)).all()
-            power_configs = ",".join(list(set([order.power_conf for order in orders if order.power_conf])))
+            # 聚合订单信息
+            orders = db.session.query(LisProjectOrder.order_name).filter(LisProjectOrder.project_id == str(task_id)).distinct().all()
             order_info = ",".join(list(set([order.order_name for order in orders if order.order_name])))
+
+            # 聚合动力配置名称，直接从 pm_work_hours 按 project_id 查询，这比按 order_id 关联更健壮
+            power_confs_query = db.session.query(PmWorkHours.power_conf).filter(PmWorkHours.select_project_id == str(task_id)).distinct().all()
+            power_configs = ",".join(list(set([pc.power_conf for pc in power_confs_query if pc.power_conf])))
 
             # 根据部门ID查询可见表权限
             visible_sheets = []
@@ -355,13 +358,20 @@ class BfaController:
                 PmWorkHours.id.label('measure_id'),
                 PmWorkHours.business_detail,
                 PmWorkHours.base_hours,
-                LisProjectOrder.power_conf,
+                PmWorkHours.power_conf, # 直接从 pm_work_hours 获取名称
                 PmMonthHoursDetail.mm,
-                PmMonthHoursDetail.month_input
+                PmMonthHoursDetail.month_input,
+                LisTask.first_task.label('first_task_name'),
+                BaHoursBasis.change_type,
+                BaHoursBasis.de_range
             ).select_from(LisProjectOrder).join(
                 PmWorkHours, PmWorkHours.select_order == LisProjectOrder.id
             ).outerjoin(
                 PmMonthHoursDetail, cast(PmWorkHours.id, String(32)).collate('utf8mb4_general_ci') == PmMonthHoursDetail.measure_id
+            ).outerjoin(
+                BaHoursBasis, PmWorkHours.select_hours_base == BaHoursBasis.id
+            ).outerjoin(
+                LisTask, cast(BaHoursBasis.first_task, BigInteger) == LisTask.id
             ).filter(
                 LisProjectOrder.project_id == project_id
             ).order_by(
@@ -379,11 +389,14 @@ class BfaController:
                 measure_id = row.measure_id
                 if measure_id not in processed_data:
                     processed_data[measure_id] = {
-                        'power_config': row.power_conf,
+                        'power_config': row.power_conf, # 确认这里使用的是 pm_work_hours 的 power_conf
                         'business_detail': row.business_detail,
                         'base_hours': float(row.base_hours) if row.base_hours is not None else 0,
                         'total_hours': 0,
-                        'monthly_inputs': {}
+                        'monthly_inputs': {},
+                        'first_task_name': row.first_task_name if row.first_task_name is not None else '未找到工时基准表',
+                        'change_type': row.change_type if row.change_type is not None else '未找到工时基准表',
+                        'de_range': row.de_range if row.de_range is not None else '未找到工时基准表'
                     }
                 
                 if row.mm and row.month_input:
@@ -406,9 +419,9 @@ class BfaController:
                     'id': measure_id,
                     '序号': index + 1,
                     '动力配置': data['power_config'],
-                    '一级任务': '',
-                    '改动类型': '',
-                    '定义范围': '',
+                    '一级任务': data['first_task_name'],
+                    '改动类型': data['change_type'],
+                    '定义范围': data['de_range'],
                     '具体事项': data['business_detail'],
                     '基准工时': data['base_hours'],
                     '填报总工时': data['total_hours'],

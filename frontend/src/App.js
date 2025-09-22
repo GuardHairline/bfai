@@ -26,6 +26,7 @@ const { Content, Sider } = Layout;
 const App = () => {
   const [selectedModel, setSelectedModel] = useState('default-model');
   const [viewingHistoryId, setViewingHistoryId] = useState(null);
+  const [viewingHistoryName, setViewingHistoryName] = useState('');
 
   const {
     loggedInUser,
@@ -99,8 +100,10 @@ const App = () => {
    */
   const handleHistorySelect = (record) => {
     const projectId = record.type === 'measurement' && record.details ? record.details.projectId : record.id;
+    const projectName = record.type === 'measurement' && record.details ? record.details.projectName : (record.name || record.measures_project);
     startNewConversation(); // 清空当前状态
     setViewingHistoryId(projectId); // 设置要查看的历史项目ID
+    setViewingHistoryName(projectName); // 设置项目名称
   };
 
   return (
@@ -123,7 +126,7 @@ const App = () => {
         />
         <Content style={{ flex: 1, padding: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {viewingHistoryId ? (
-            <ProCard title="历史测算详情" bordered headerBordered style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+            <ProCard title={`“${viewingHistoryName}” 历史测算详情`} bordered headerBordered style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
               <HistoricalDetailsTable
                 tableData={historicalDetails.tableData}
                 dynamicColumns={historicalDetails.dynamicColumns}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, Button, Space } from 'antd';
+import { Table} from 'antd';
 import PropTypes from 'prop-types';
 
 const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
@@ -9,33 +9,20 @@ const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
     { title: '一级任务', dataIndex: '一级任务', key: '一级任务', width: 100 },
     { title: '改动类型', dataIndex: '改动类型', key: '改动类型', width: 100 },
     { title: '定义范围', dataIndex: '定义范围', key: '定义范围', width: 100 },
-    { title: '具体事项', dataIndex: '具体事项', key: '具体事项', width: 250 },
+    { title: '具体事项', dataIndex: '具体事项', key: '具体事项', width: 200 },
     { title: '基准工时', dataIndex: '基准工时', key: '基准工时', width: 100 },
-    { title: '填报总工时', dataIndex: '填报总工时', key: '填报总工时', width: 120 },
+    { title: '填报总工时', dataIndex: '填报总工时', key: '填报总工时', width: 80 },
   ];
 
   const monthColumns = dynamicColumns.map(month => ({
     title: month,
     dataIndex: month,
     key: month,
-    width: 100,
+    width: 80,
   }));
 
-  const actionColumn = {
-    title: '操作',
-    key: 'action',
-    fixed: 'right',
-    width: 120,
-    render: (text, record) => (
-      <Space size="middle">
-        <Button type="primary" onClick={() => console.log('Referencing item:', record.id)}>
-          参考并测算
-        </Button>
-      </Space>
-    ),
-  };
 
-  const columns = [...staticColumns, ...monthColumns, actionColumn];
+  const columns = [...staticColumns, ...monthColumns];
 
   return (
     <div style={{ marginTop: '20px', width: '100%' }}>
