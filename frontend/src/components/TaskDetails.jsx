@@ -3,7 +3,7 @@ import { Table, Card } from 'antd';
 import { useReferenceProjects } from '../hooks/useReferenceProjects';
 import ReferenceProjects from './ReferenceProjects';
 
-const TaskDetails = ({ details }) => {
+const TaskDetails = ({ details, onReferenceProject }) => {
   const taskId = details ? details.projectId : null;
   const departmentId = details ? details.permissions.departmentId : null;
   const { projects, loading } = useReferenceProjects(taskId, departmentId);
@@ -60,7 +60,11 @@ const TaskDetails = ({ details }) => {
           style={{ width: '100%', minWidth: '500px' }}
         />
       </Card>
-      <ReferenceProjects projects={projects} loading={loading} />
+      <ReferenceProjects 
+        projects={projects} 
+        loading={loading} 
+        onReferenceProject={onReferenceProject}
+      />
     </div>
   );
 };

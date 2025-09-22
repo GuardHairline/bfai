@@ -9,6 +9,7 @@ import BaselineDetails from './BaselineDetails';
 import BaselineHistoryDetails from './BaselineHistoryDetails';
 import MeasurementEntry from './MeasurementEntry';
 import TaskDetails from './TaskDetails';
+import BaselineWorkHoursTable from './BaselineWorkHoursTable';
 
 const ChatContentRenderer = ({
   item,
@@ -26,6 +27,8 @@ const ChatContentRenderer = ({
   handleSubmitMeasurement,
   handleStartMeasurement,
   continueToMeasurement,
+  generateReferenceProjectMessage,
+  generateBaselineWorkHoursResponse,
 }) => {
   // The logic for displaying historical details has been moved to App.js
   
@@ -56,7 +59,7 @@ const ChatContentRenderer = ({
     case 'history-table':
       return <HistoryTable history={historicalProjects} onReference={() => { /* Implement later */ }} />;
     case 'task-details':
-      return <TaskDetails details={projectDetails} />;
+      return <TaskDetails details={projectDetails} onReferenceProject={generateReferenceProjectMessage} />;
     case 'project-info':
       return <ProjectInfo project={projectDetails} />;
     case 'strategy-list':
@@ -69,6 +72,8 @@ const ChatContentRenderer = ({
       return <BaselineHistoryDetails baselineIds={item.baselineIds || []} />;
     case 'measurement-entry':
       return <MeasurementEntry onStart={handleStartMeasurement} />;
+    case 'baseline-work-hours-table':
+      return <BaselineWorkHoursTable data={item.tableData || []} />;
     default:
       return defaultDom;
   }

@@ -42,6 +42,8 @@ const App = () => {
     onChatsChange,
     pushMessages,
     startNewConversationMessages,
+    generateReferenceProjectMessage,
+    generateBaselineWorkHoursResponse,
   } = useChat();
   
   const {
@@ -152,6 +154,8 @@ const App = () => {
                     handleSubmitMeasurement={handleSubmitMeasurement}
                     handleStartMeasurement={handleStartMeasurement}
                     continueToMeasurement={continueToMeasurement}
+                    generateReferenceProjectMessage={generateReferenceProjectMessage}
+                    generateBaselineWorkHoursResponse={generateBaselineWorkHoursResponse}
                   />
                 )}
               />

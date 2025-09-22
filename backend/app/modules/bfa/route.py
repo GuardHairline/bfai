@@ -57,3 +57,7 @@ def get_reference_projects(task_id):
 @bfa_bp.route('/history/<string:project_id>/details', methods=['GET'])
 def get_historical_project_details(project_id):
     return bfa_controller.get_historical_project_details(project_id)
+
+@bfa_bp.route('/projects/<string:project_id>/order-names', methods=['GET'])
+def get_project_order_names(project_id):
+    return bfa_controller.get_project_order_names(project_id)

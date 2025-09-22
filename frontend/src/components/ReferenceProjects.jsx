@@ -2,7 +2,7 @@ import React from 'react';
 import { Table, Button, Tag, Space } from 'antd';
 import PropTypes from 'prop-types';
 
-const ReferenceProjects = ({ projects, loading }) => {
+const ReferenceProjects = ({ projects, loading, onReferenceProject }) => {
   const columns = [
     {
       title: '项目名称',
@@ -36,7 +36,10 @@ const ReferenceProjects = ({ projects, loading }) => {
       key: 'action',
       render: (text, record) => (
         <Space size="middle">
-          <Button type="primary" onClick={() => console.log('Referencing project:', record.id)}>
+          <Button 
+            type="primary" 
+            onClick={() => onReferenceProject && onReferenceProject(record)}
+          >
             参考并测算
           </Button>
         </Space>
@@ -61,6 +64,7 @@ const ReferenceProjects = ({ projects, loading }) => {
 ReferenceProjects.propTypes = {
   projects: PropTypes.array.isRequired,
   loading: PropTypes.bool.isRequired,
+  onReferenceProject: PropTypes.func,
 };
 
 export default ReferenceProjects;

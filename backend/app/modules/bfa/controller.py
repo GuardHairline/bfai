@@ -424,3 +424,27 @@ class BfaController:
         except Exception as e:
             print(f"获取历史项目详情时出错: {e}")
             return jsonify(error="获取历史项目详情失败", message=str(e)), 500
+
+    def get_project_order_names(self, project_id):
+        """
+        根据项目ID获取对应的所有order_name
+        """
+        try:
+            print(f"查询项目ID: {project_id}")
+            
+            # 查询lis_project_order表中project_id对应的所有order_name
+            query = db.session.query(LisProjectOrder.order_name).filter(
+                LisProjectOrder.project_id == str(project_id)
+            )
+            
+            results = query.all()
+            print(f"查询结果: {results}")
+            
+            order_names = [result[0] for result in results if result[0]]
+            print(f"处理后的order_names: {order_names}")
+            
+            return jsonify(data=order_names)
+            
+        except Exception as e:
+            print(f"获取项目order_name时出错: {e}")
+            return jsonify(error="获取项目order_name失败", message=str(e)), 500
