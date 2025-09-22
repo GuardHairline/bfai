@@ -8,7 +8,7 @@ class BaseConfig:
 class DevelopmentConfig(BaseConfig):
     """Development configuration."""
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:root@localhost:3306/testbudget'
+    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:xpy013629@localhost:3306/nankai'
     OLLAMA_API_BASE_URL = "http://localhost:11434/v1"
     OLLAMA_MODEL = "qwen3:4b"
 

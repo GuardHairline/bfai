@@ -7,7 +7,6 @@ class AIService:
             base_url=api_base_url,
             api_key='ollama',
             http_client=httpx.Client(
-                proxies={"http://": None, "https://": None},
                 timeout=120.0, # Increase timeout for streaming
             ),
         )

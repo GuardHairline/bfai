@@ -18,7 +18,7 @@ export const fetchTaskDetails = async (taskInfo) => {
     return result.data;
   } catch (error) {
     console.error("Failed to fetch project details:", error);
-    message.error("»ñÈ¡ÏîÄ¿ÏêÇéÊ§°Ü");
+    message.error("è·å–é¡¹ç›®è¯¦æƒ…å¤±è´¥");
     throw error;
   }
 };
@@ -30,7 +30,7 @@ export const fetchHistory = async () => {
     return result.data || [];
   } catch (error) {
     console.error("Failed to fetch history:", error);
-    message.error("»ñÈ¡ÀúÊ·¼ÇÂ¼Ê§°Ü");
+    message.error("è·å–å†å²è®°å½•å¤±è´¥");
     throw error;
   }
 };
@@ -46,7 +46,7 @@ export const fetchTasks = async (personId) => {
     return result.data || [];
   } catch (error) {
     console.error("Failed to fetch tasks:", error);
-    message.error("»ñÈ¡ÈÎÎñÁĞ±íÊ§°Ü");
+    message.error("è·å–ä»»åŠ¡åˆ—è¡¨å¤±è´¥");
     throw error;
   }
 };
@@ -58,7 +58,7 @@ export const fetchPersons = async () => {
     return result.data || [];
   } catch (error) {
     console.error("Failed to fetch persons:", error);
-    message.error('»ñÈ¡½Ó¿ÚÈËÁĞ±íÊ§°Ü');
+    message.error('è·å–æ¥å£äººåˆ—è¡¨å¤±è´¥');
     throw error;
   }
 };
@@ -86,7 +86,7 @@ export const streamChatResponse = async (chatMessage, onChunk, onError) => {
     }
   } catch (error) {
     console.error("Failed to get chat reply:", error);
-    message.error("»ñÈ¡AI»Ø¸´Ê§°Ü");
+    message.error("è·å–AIå›å¤å¤±è´¥");
     if (onError) {
       onError(error);
     }
@@ -100,7 +100,7 @@ export const fetchReferenceProjects = async (taskId, departmentId) => {
     return result.data || [];
   } catch (error) {
     console.error("Failed to fetch reference projects:", error);
-    message.error("»ñÈ¡²Î¿¼ÏîÄ¿ÁĞ±íÊ§°Ü");
+    message.error("è·å–å‚è€ƒé¡¹ç›®åˆ—è¡¨å¤±è´¥");
     throw error;
   }
 };
@@ -112,7 +112,19 @@ export const fetchHistoricalProjectDetails = async (projectId) => {
     return result.data || { table_data: [], dynamic_columns: [] };
   } catch (error) {
     console.error("Failed to fetch historical project details:", error);
-    message.error("»ñÈ¡ÀúÊ·ÏîÄ¿ÏêÇéÊ§°Ü");
+    message.error("è·å–å†å²é¡¹ç›®è¯¦æƒ…å¤±è´¥");
+    throw error;
+  }
+};
+
+export const fetchProjectOrderNames = async (projectId) => {
+  try {
+    const response = await fetch(`/api/v1/bfa/projects/${projectId}/order-names`);
+    const result = await handleResponse(response);
+    return result.data || [];
+  } catch (error) {
+    console.error("Failed to fetch project order names:", error);
+    message.error("è·å–é¡¹ç›®è®¢å•åç§°å¤±è´¥");
     throw error;
   }
 };

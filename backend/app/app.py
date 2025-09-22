@@ -12,8 +12,7 @@ def create_app(config=None) -> Flask:
     global ai_service
     app = Flask(__name__)
     app_config = get_config_by_name(config)
-    if config:
-        app.config.from_object(app_config)
+    app.config.from_object(app_config)
 
     # Initialize extensions
     db.init_app(app)
