@@ -7,7 +7,7 @@ import HistoryTable from './HistoryTable';
 import StrategyList from './StrategyList';
 import ProjectInfo from './ProjectInfo';
 import BaselineList from './BaselineList';
-import BaselineDetails from './BaselineDetails';
+// import BaselineDetails from './BaselineDetails';
 import BaselineHistoryDetails from './BaselineHistoryDetails';
 import MeasurementEntry from './MeasurementEntry';
 import { sampleBaseline } from '../data/sampleData';
@@ -58,8 +58,6 @@ const ChatContent = ({
         return <StrategyList strategies={[]} onSelect={handleSelectStrategy} currentStrategy={currentStrategy} />;
       case 'baseline-list':
         return <BaselineList baselines={sampleBaseline} selectedIds={selectedBaselineIds} onChange={setSelectedBaselineIds} onSubmit={handleConfirmBaselines} />;
-      case 'baseline-details':
-        return <BaselineDetails baselineIds={selectedBaselineIds} baselines={sampleBaseline} onSubmit={handleSubmitMeasurement} />;
       case 'baseline-history-details':
         return <BaselineHistoryDetails baselineIds={item.baselineIds || []} />;
       case 'measurement-entry':
