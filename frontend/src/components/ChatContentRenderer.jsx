@@ -9,7 +9,9 @@ import BaselineDetails from './BaselineDetails';
 import BaselineHistoryDetails from './BaselineHistoryDetails';
 import MeasurementEntry from './MeasurementEntry';
 import TaskDetails from './TaskDetails';
-import BaselineWorkHoursTable from './BaselineWorkHoursTable';
+// import BaselineWorkHoursTable from './BaselineWorkHoursTable';
+import HistoricalDetailsTable from './HistoricalDetailsTable';
+import { sampleBaseline } from '../data/sampleData';
 
 const ChatContentRenderer = ({
   item,
@@ -28,7 +30,7 @@ const ChatContentRenderer = ({
   handleStartMeasurement,
   continueToMeasurement,
   generateReferenceProjectMessage,
-  generateBaselineWorkHoursResponse,
+  generateHistoricalDetailsTable,
 }) => {
   // The logic for displaying historical details has been moved to App.js
   
@@ -57,7 +59,18 @@ const ChatContentRenderer = ({
         setConversationHistory(prev => [...prev, { title: task.name, timestamp: new Date().toLocaleString() }]);
       }} />;
     case 'history-table':
-      return <HistoryTable history={historicalProjects} onReference={() => { /* Implement later */ }} />;
+      return (
+        <HistoryTable
+          history={historicalProjects}
+          onReference={(record) => {
+            const projectId = record.project_id || record.projectId || record.id;
+            const projectName = record.name || record.measures_project;
+            if (projectId) {
+              generateHistoricalDetailsTable(projectId, projectName);
+            }
+          }}
+        />
+      );
     case 'task-details':
       return <TaskDetails details={projectDetails} onReferenceProject={generateReferenceProjectMessage} />;
     case 'project-info':
@@ -65,15 +78,32 @@ const ChatContentRenderer = ({
     case 'strategy-list':
       return <StrategyList strategies={[]} onSelect={handleSelectStrategy} currentStrategy={currentStrategy} />;
     case 'baseline-list':
-      return <BaselineList baselines={[]} selectedIds={selectedBaselineIds} onChange={setSelectedBaselineIds} onSubmit={handleConfirmBaselines} />;
+      return <BaselineList baselines={sampleBaseline} selectedIds={selectedBaselineIds} onChange={setSelectedBaselineIds} onSubmit={handleConfirmBaselines} />;
     case 'baseline-details':
-      return <BaselineDetails baselineIds={selectedBaselineIds} baselines={[]} onSubmit={handleSubmitMeasurement} />;
+      return (
+        <div style={{ width: '100%', overflowX: 'auto' }}>
+          <BaselineDetails
+            baselineIds={selectedBaselineIds}
+            baselines={sampleBaseline}
+            onSubmit={handleSubmitMeasurement}
+          />
+        </div>
+      );
     case 'baseline-history-details':
       return <BaselineHistoryDetails baselineIds={item.baselineIds || []} />;
     case 'measurement-entry':
       return <MeasurementEntry onStart={handleStartMeasurement} />;
-    case 'baseline-work-hours-table':
-      return <BaselineWorkHoursTable data={item.tableData || []} />;
+    case 'historical-details-table':
+      const payload = item?.tableData || item?.dynamicColumns ? item : (item?.originData || {});
+      return (
+        <div style={{ width: '100%', overflowX: 'auto' }}>
+          <HistoricalDetailsTable
+            tableData={payload.tableData || []}
+            dynamicColumns={payload.dynamicColumns || []}
+            loading={false}
+          />
+        </div>
+      );
     default:
       return defaultDom;
   }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Typography } from 'antd';
+import { Button, Typography, Space, Popconfirm, message } from 'antd';
 import { EditableProTable } from '@ant-design/pro-components';
 
 const { Paragraph } = Typography;
@@ -23,7 +23,7 @@ const BaselineDetails = ({ baselineIds, baselines, onSubmit }) => {
       .filter(Boolean)
       .map((item) => ({ ...item })),
   );
-  const [editing, setEditing] = useState(false);
+  const [editableKeys, setEditableKeys] = useState([]);
 
   // Summary calculations: total hours, unique power configurations,
   // and months grouped by configuration.
@@ -37,6 +37,11 @@ const BaselineDetails = ({ baselineIds, baselines, onSubmit }) => {
     configMonths[cfg] = (configMonths[cfg] || 0) + (item.months || 0);
   });
 
+  const handleDelete = (row) => {
+    setDataSource(prev => prev.filter(item => item.id !== row.id));
+    message.success('已删除该行');
+  };
+
   const columns = [
     { title: '序号', dataIndex: 'id', editable: false },
     { title: '动力配置', dataIndex: 'powerConfig' },
@@ -45,32 +50,50 @@ const BaselineDetails = ({ baselineIds, baselines, onSubmit }) => {
     { title: '具体事项', dataIndex: 'matter' },
     { title: '工时', dataIndex: 'hours' },
     { title: '月数', dataIndex: 'months' },
+    {
+      title: '操作',
+      valueType: 'option',
+      width: 140,
+      render: (text, row) => {
+        const isEditing = editableKeys.includes(row.id);
+        return (
+          <Space>
+            {isEditing ? (
+              <Button type="link" onClick={() => setEditableKeys(keys => keys.filter(k => k !== row.id))}>完成</Button>
+            ) : (
+              <Button type="link" onClick={() => setEditableKeys(keys => Array.from(new Set([...keys, row.id])))}>编辑</Button>
+            )}
+            <Popconfirm title="确认删除该行？" onConfirm={() => handleDelete(row)}>
+              <Button type="link" danger>删除</Button>
+            </Popconfirm>
+          </Space>
+        );
+      }
+    },
   ];
 
   return (
     <div>
-      <div
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}
-      >
-        <span style={{ fontWeight: 500 }}>基准任务工时及月度明细</span>
-        <Button onClick={() => setEditing(!editing)}>
-          {editing ? '完成编辑' : '编辑'}
-        </Button>
+      <div style={{ width: '100%', overflowX: 'auto' }}>
+        <EditableProTable
+          rowKey="id"
+          value={dataSource}
+          columns={columns}
+          recordCreatorProps={false}
+          pagination={false}
+          scroll={{ x: 'max-content' }}
+          editable={{
+            editableKeys,
+            onChange: setEditableKeys,
+            onSave: async (rowKey, data, row) => {
+              setDataSource((prev) => prev.map((item) => (item.id === rowKey ? { ...row } : item)));
+              setEditableKeys(keys => keys.filter(k => k !== rowKey));
+              message.success('已保存');
+            },
+            type: 'multiple',
+          }}
+        />
       </div>
-      <EditableProTable
-        rowKey="id"
-        value={dataSource}
-        columns={columns}
-        recordCreatorProps={false}
-        pagination={false}
-        editable={{
-          editableKeys: editing ? dataSource.map((d) => d.id) : [],
-          onSave: async (rowKey, data, row) => {
-            setDataSource((prev) => prev.map((item) => (item.id === rowKey ? { ...row } : item)));
-          },
-          type: editing ? 'multiple' : undefined,
-        }}
-      />
       <Paragraph style={{ marginTop: 16 }}>
         共查询到 {dataSource.length} 条基准任务工时记录；总目标工时合计:{totalHours}
         工时；动力配置总数: {configSet.size} 种；日程月数:

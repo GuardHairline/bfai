@@ -800,14 +800,9 @@ const AntProChatAIDemo = () => {
             onSubmit={handleConfirmBaselines}
           />
         );
+      // baseline-details 展示已删除
       case 'baseline-details':
-        return (
-          <BaselineDetails
-            baselineIds={selectedBaselineIds}
-            baselines={sampleBaseline}
-            onSubmit={handleSubmitMeasurement}
-          />
-        );
+        return null;
       case 'baseline-history-details':
         return (
           <BaselineHistoryDetails baselineIds={item.baselineIds || []} />

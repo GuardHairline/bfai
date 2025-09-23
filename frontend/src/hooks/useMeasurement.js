@@ -12,7 +12,7 @@ export const useMeasurement = (pushMessages, selectedTask, selectedBaselineIds, 
       setSelectedBaselineIds(strategy.baselineIds);
       setBaselineSelectionMode(false);
       pushMessages([
-        { role: 'assistant', content: `已选择策略：${strategy.name}，以下为自动选择的基准任务：` },
+        { role: 'assistant', content: `已选择策略：${strategy.name}，基准任务已自动选择。` },
         { role: 'baseline-details', content: null },
       ]);
     } else {
@@ -29,7 +29,7 @@ export const useMeasurement = (pushMessages, selectedTask, selectedBaselineIds, 
     if (selectedBaselineIds.length === 0) return;
     setBaselineSelectionMode(false);
     pushMessages([
-      { role: 'assistant', content: '已确认选择的基准任务，以下为明细：' },
+      { role: 'assistant', content: '已确认选择的基准任务。' },
       { role: 'baseline-details', content: null },
     ]);
   }, [selectedBaselineIds.length, pushMessages]);
