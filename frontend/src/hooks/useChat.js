@@ -36,7 +36,7 @@ export const useChat = () => {
     ]);
   }, [pushMessages]);
 
-
+                  
   // 在聊天中渲染与右侧历史详情相同的表格（模仿 useHistoricalDetails.js）
   const generateHistoricalDetailsTable = useCallback(async (projectId, projectName) => {
     if (!projectId) return;
