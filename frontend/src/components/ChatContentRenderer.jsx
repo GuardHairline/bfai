@@ -11,6 +11,7 @@ import MeasurementEntry from './MeasurementEntry';
 import TaskDetails from './TaskDetails';
 // import BaselineWorkHoursTable from './BaselineWorkHoursTable';
 import HistoricalDetailsTable from './HistoricalDetailsTable';
+import MeasurementTable from './MeasurementTable';
 import { sampleBaseline } from '../data/sampleData';
 
 const ChatContentRenderer = ({
@@ -93,6 +94,17 @@ const ChatContentRenderer = ({
       return <BaselineHistoryDetails baselineIds={item.baselineIds || []} />;
     case 'measurement-entry':
       return <MeasurementEntry onStart={handleStartMeasurement} />;
+    case 'measurement-table':
+        const measurementPayload = item?.tableData || item?.dynamicColumns ? item : (item?.originData || {});
+        return (
+          <div style={{ minWidth: 0, overflowX: 'auto'}}>
+            <MeasurementTable
+              tableData={measurementPayload.tableData || []}
+              dynamicColumns={measurementPayload.dynamicColumns || []}
+              loading={false}
+            />
+          </div>
+        );
     case 'historical-details-table':
       const payload = item?.tableData || item?.dynamicColumns ? item : (item?.originData || {});
       return (

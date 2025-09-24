@@ -22,7 +22,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# ignore pdf, txt, doc, docx, xls, xlsx, mp4, sql
+# ignore pdf, txt, doc, docx, xls, xlsx, mp4, sql, ppt
 *.pdf
 *.doc
 *.docx
@@ -30,6 +30,7 @@ yarn-error.log*
 *.xlsx
 *.mp4
 *.sql
+*.pptx
 
 # ignore sheet
 /sheet

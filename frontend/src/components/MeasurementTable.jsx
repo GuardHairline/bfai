@@ -92,9 +92,62 @@ const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
     };
   });
 
+  const handleEdit = (record, index) => {
+    const key = getRowKey(record, index);
+    setEditingKey(key);
+    // initialize editing values from record for editable fields
+    const init = {};
+    editableFields.forEach(field => {
+      init[field] = record?.[field];
+    });
+    setEditingValues(init);
+  };
 
+  const handleCancel = () => {
+    setEditingKey(null);
+    setEditingValues({});
+  };
 
-  const columns = [...baseColumns, ...monthColumns,];
+  const handleSave = (record, index) => {
+    const key = getRowKey(record, index);
+    setDataSource(prev => prev.map((row, i) => (getRowKey(row, i) === key ? { ...row, ...editingValues } : row)));
+    setEditingKey(null);
+    setEditingValues({});
+    message.success('已保存');
+  };
+
+  const handleDelete = (record, index) => {
+    const key = getRowKey(record, index);
+    setDataSource(prev => prev.filter((row, i) => getRowKey(row, i) !== key));
+    message.success('已删除');
+  };
+
+  const actionColumn = useMemo(() => ({
+    title: '操作',
+    key: 'action',
+    fixed: 'right',
+    width: 140,
+    render: (_v, record, index) => {
+      const editing = isEditing(record, index);
+      return (
+        <Space>
+          {editing ? (
+            <>
+              <Button type="link" onClick={() => handleSave(record, index)}>保存</Button>
+              <Button type="link" onClick={handleCancel}>取消</Button>
+            </>
+          ) : (
+            <Button type="link" onClick={() => handleEdit(record, index)}>编辑</Button>
+          )}
+          <Popconfirm title="确认删除该行？" onConfirm={() => handleDelete(record, index)}>
+            <Button type="link" danger>删除</Button>
+          </Popconfirm>
+        </Space>
+      );
+    },
+  }), [editingKey, editingValues]);
+
+  const columns = [...baseColumns, ...monthColumns, actionColumn];
 
   return (
     <div style={{ marginTop: '20px', width: '100%', overflowX: 'auto' }}>

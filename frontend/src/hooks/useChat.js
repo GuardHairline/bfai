@@ -36,9 +36,9 @@ export const useChat = () => {
     ]);
   }, [pushMessages]);
 
-                  
-  // 在聊天中渲染与右侧历史详情相同的表格（模仿 useHistoricalDetails.js）
-  const generateHistoricalDetailsTable = useCallback(async (projectId, projectName) => {
+
+  // 在聊天中渲染测算表格
+  const generateMeasurementTable = useCallback(async (projectId, projectName) => {
     if (!projectId) return;
     try {
       const data = await fetchHistoricalProjectDetails(projectId);
@@ -48,11 +48,11 @@ export const useChat = () => {
         { role: 'assistant', content: '思考中' },
         { role: 'assistant', content: '已思考' },
         { role: 'assistant', content: `以下为“${projectName || ''}”的基准任务工时及月度明细：` },
-        { role: 'historical-details-table', content: null, tableData, dynamicColumns },
+        { role: 'measurement-table', content: null, tableData, dynamicColumns },
       ]);
     } catch (e) {
       // 错误在 API 层已提示
-      pushMessages([{ role: 'assistant', content: '获取历史详情失败，请稍后重试。' }]);
+      pushMessages([{ role: 'assistant', content: '获取测算详情失败，请稍后重试。' }]);
     }
   }, [pushMessages]);
 
@@ -62,8 +62,8 @@ export const useChat = () => {
       { role: 'user', content: message },
     ]);
     // 直接生成与右侧相同的基准任务工时及月度明细表
-    generateHistoricalDetailsTable(project.id, project.projectName);
-  }, [pushMessages, generateHistoricalDetailsTable]);
+    generateMeasurementTable(project.id, project.projectName);
+  }, [pushMessages, generateMeasurementTable]);
 
   
 
@@ -154,6 +154,6 @@ export const useChat = () => {
     startNewConversationMessages,
     viewHistoryRecordMessages,
     generateReferenceProjectMessage,
-    generateHistoricalDetailsTable,
+    generateMeasurementTable,
   };
 };
