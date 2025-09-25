@@ -1,21 +1,28 @@
 import React, { useMemo, useState } from 'react';
 import { Table, Input, InputNumber, Button, Space, Popconfirm, message } from 'antd';
 import PropTypes from 'prop-types';
+import BaselineBusinessModal from './BaselineBusinessModal';
 
-const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
+const MeasurementTable = ({ tableData, dynamicColumns, loading, onSubmit }) => {
   // Local editable state
-  const [dataSource, setDataSource] = useState(() => Array.isArray(tableData) ? tableData : []);
+  const [dataSource, setDataSource] = useState([]);
   const [editingKey, setEditingKey] = useState(null);
   const [editingValues, setEditingValues] = useState({});
+  const [newRowCounter, setNewRowCounter] = useState(0);
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   // Sync local state when incoming data changes
   React.useEffect(() => {
-    setDataSource(Array.isArray(tableData) ? tableData : []);
+    const initialData = (Array.isArray(tableData) ? tableData : []).map((row, index) => ({
+      ...row,
+      key: row?.id ?? row?.['序号'] ?? `row_${index}`
+    }));
+    setDataSource(initialData);
     setEditingKey(null);
     setEditingValues({});
   }, [tableData]);
 
-  const getRowKey = (record, index) => record?.id ?? record?.['序号'] ?? index;
+  const getRowKey = (record, index) => record.key ?? record?.id ?? record?.['序号'] ?? index;
   const isEditing = (record, index) => editingKey === getRowKey(record, index);
 
   const staticColumns = [
@@ -26,13 +33,22 @@ const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
     { title: '定义范围', dataIndex: '定义范围', key: '定义范围', width: 100 },
     { title: '具体事项', dataIndex: '具体事项', key: '具体事项', width: 200 },
     { title: '基准工时', dataIndex: '基准工时', key: '基准工时', width: 100 },
-    { title: '填报总工时', dataIndex: '填报总工时', key: '填报总工时', width: 80 },
+    {
+      title: '填报总工时',
+      dataIndex: '填报总工时',
+      key: '填报总工时',
+      width: 80,
+      render: (text, record, index) => {
+        if (isEditing(record, index)) {
+          return editingValues['填报总工时'];
+        }
+        const total = (dynamicColumns || []).reduce((sum, month) => sum + (Number(record[month]) || 0), 0);
+        return total;
+      },
+    },
   ];
 
   const editableFields = new Set([
-    '具体事项',
-    '基准工时',
-    '填报总工时',
     // dynamic month fields appended below
   ]);
 
@@ -47,7 +63,13 @@ const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
         isEditing(record, index) ? (
           <InputNumber
             value={editingValues[month]}
-            onChange={(v) => setEditingValues(prev => ({ ...prev, [month]: v }))}
+            onChange={(v) => {
+              setEditingValues(prev => {
+                const newValues = { ...prev, [month]: v };
+                const total = (dynamicColumns || []).reduce((sum, m) => sum + (Number(newValues[m]) || 0), 0);
+                return { ...newValues, '填报总工时': total };
+              });
+            }}
             style={{ width: '100%' }}
             min={0}
           />
@@ -60,20 +82,6 @@ const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
   const baseColumns = staticColumns.map(col => {
     if (!editableFields.has(col.dataIndex)) {
       return col;
-    }
-    if (col.dataIndex === '具体事项') {
-      return {
-        ...col,
-        render: (value, record, index) =>
-          isEditing(record, index) ? (
-            <Input
-              value={editingValues['具体事项']}
-              onChange={(e) => setEditingValues(prev => ({ ...prev, ['具体事项']: e.target.value }))}
-            />
-          ) : (
-            value
-          ),
-      };
     }
     // numeric fields
     return {
@@ -100,6 +108,8 @@ const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
     editableFields.forEach(field => {
       init[field] = record?.[field];
     });
+    const total = (dynamicColumns || []).reduce((sum, month) => sum + (Number(record[month]) || 0), 0);
+    init['填报总工时'] = total;
     setEditingValues(init);
   };
 
@@ -120,6 +130,26 @@ const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
     const key = getRowKey(record, index);
     setDataSource(prev => prev.filter((row, i) => getRowKey(row, i) !== key));
     message.success('已删除');
+  };
+
+  const handleModalOk = (selectedItems) => {
+    const newRows = selectedItems.map((item, index) => {
+      const key = `new_${newRowCounter + index}`;
+      const newRow = {
+        ...item,
+        key,
+        '序号': dataSource.length + index + 1,
+        '填报总工时': 0,
+      };
+      (dynamicColumns || []).forEach(month => {
+        newRow[month] = 0;
+      });
+      return newRow;
+    });
+
+    setDataSource(prev => [...prev, ...newRows]);
+    setNewRowCounter(c => c + newRows.length);
+    setIsModalVisible(false);
   };
 
   const actionColumn = useMemo(() => ({
@@ -151,6 +181,9 @@ const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
 
   return (
     <div style={{ marginTop: '20px', width: '100%', overflowX: 'auto' }}>
+      <Button onClick={() => setIsModalVisible(true)} type="primary" style={{ marginBottom: 16 }}>
+        新增业务
+      </Button>
       <Table 
         columns={columns} 
         dataSource={dataSource} 
@@ -160,14 +193,25 @@ const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
         pagination={{ pageSize: 10 }}
         bordered
       />
+      <div style={{ marginTop: '16px', textAlign: 'right' }}>
+        <Button type="primary" onClick={() => onSubmit && onSubmit(dataSource)}>
+          提交
+        </Button>
+      </div>
+      <BaselineBusinessModal
+        visible={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
+        onOk={handleModalOk}
+      />
     </div>
   );
 };
 
-HistoricalDetailsTable.propTypes = {
+MeasurementTable.propTypes = {
   tableData: PropTypes.array.isRequired,
   dynamicColumns: PropTypes.array.isRequired,
   loading: PropTypes.bool.isRequired,
+  onSubmit: PropTypes.func,
 };
 
-export default HistoricalDetailsTable;
+export default MeasurementTable;
