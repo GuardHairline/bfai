@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from 'react';
 
 export const useAnimatedRows = (dataSource, delay = 300) => {
-    const [visibleRows, setVisibleRows] = useState([]);
+  const [visibleRows, setVisibleRows] = useState([]);
 
-    useEffect(() => {
-        setVisibleRows([]);
-        if (dataSource && dataSource.length > 0) {
-            let i = 0;
-            const interval = setInterval(() => {
-                if (i < dataSource.length) {
-                    setVisibleRows(prev => [...prev, dataSource[i]]);
-                    i++;
-                } else {
-                    clearInterval(interval);
-                }
-            }, delay);
-            return () => clearInterval(interval);
-        }
-    }, [dataSource, delay]);
+  useEffect(() => {
+    setVisibleRows([]); 
 
-    return visibleRows;
+    if (dataSource && dataSource.length > 0) {
+      const interval = setInterval(() => {
+        setVisibleRows(currentRows => {
+          if (currentRows.length < dataSource.length) {
+            return [...currentRows, dataSource[currentRows.length]];
+          }
+          clearInterval(interval);
+          return currentRows;
+        });
+      }, delay);
+      return () => clearInterval(interval);
+    }
+  }, [dataSource, delay]);
+
+  return visibleRows;
 };
