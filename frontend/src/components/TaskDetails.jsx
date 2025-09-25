@@ -1,12 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Table, Card } from 'antd';
 import { useReferenceProjects } from '../hooks/useReferenceProjects';
 import ReferenceProjects from './ReferenceProjects';
 
 const TaskDetails = ({ details, onReferenceProject }) => {
+  const [visible, setVisible] = useState(false);
   const taskId = details ? details.projectId : null;
   const departmentId = details ? details.permissions.departmentId : null;
   const { projects, loading } = useReferenceProjects(taskId, departmentId);
+
+  useEffect(() => {
+    if (details) {
+      setVisible(true);
+    }
+  }, [details]);
 
   if (!details) {
     return <Card bordered={false}>加载任务详情中...</Card>;
@@ -17,7 +24,7 @@ const TaskDetails = ({ details, onReferenceProject }) => {
       title: '字段',
       dataIndex: 'label',
       key: 'label',
-      width: '30%', // 恢复常规比例
+      width: '30%',
       render: (text) => <strong>{text}</strong>,
       onCell: () => ({
         style: {
@@ -29,7 +36,7 @@ const TaskDetails = ({ details, onReferenceProject }) => {
       title: '值',
       dataIndex: 'value',
       key: 'value',
-      width: '70%', // 恢复常规比例
+      width: '70%',
     },
   ];
 
@@ -40,7 +47,7 @@ const TaskDetails = ({ details, onReferenceProject }) => {
     { key: '4', label: '品牌', value: details.brand },
     { key: '5', label: '开发规模 (SML)', value: details.scale },
     { key: '6', label: '测算状态', value: details.status },
-    { key: '7', label: '测算人', value: details.calculator },
+    { key: '7', 'label': '测算人', value: details.calculator },
     { key: '8', label: '创建时间', value: details.createdAt },
     { key: '9', label: '更新时间', value: details.updatedAt },
     { key: '10', label: '订单信息', value: details.orderInfo },
@@ -48,7 +55,7 @@ const TaskDetails = ({ details, onReferenceProject }) => {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', opacity: visible ? 1 : 0, transition: 'opacity 500ms ease-in' }}>
       <Card bordered={false} bodyStyle={{ padding: 0 }}>
         <Table
           columns={columns}

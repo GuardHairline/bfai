@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from 'antd';
 import { ProTable } from '@ant-design/pro-components';
+import { useAnimatedRows } from '../hooks/useAnimatedRows';
 
 /**
  * HistoryTable renders a list of historical measurement records.  Each
@@ -13,6 +14,7 @@ import { ProTable } from '@ant-design/pro-components';
  * @param {Function} onReference - callback receiving the clicked record.
  */
 const HistoryTable = ({ history, onReference }) => {
+  const animatedHistory = useAnimatedRows(history);
   const columns = [
     { title: '项目名称', dataIndex: 'name' },
     { title: '部门', dataIndex: 'department' },
@@ -34,7 +36,7 @@ const HistoryTable = ({ history, onReference }) => {
   return (
     <ProTable
       rowKey="id"
-      dataSource={history}
+      dataSource={animatedHistory}
       columns={columns}
       search={false}
       options={false}

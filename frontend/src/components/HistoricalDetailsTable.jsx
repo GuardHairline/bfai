@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Table, Input, InputNumber, Button, Space, Popconfirm, message } from 'antd';
 import PropTypes from 'prop-types';
+import { useAnimatedRows } from '../hooks/useAnimatedRows';
 
 const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
   // Local editable state
@@ -14,6 +15,8 @@ const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
     setEditingKey(null);
     setEditingValues({});
   }, [tableData]);
+
+  const animatedDataSource = useAnimatedRows(dataSource);
 
   const getRowKey = (record, index) => record?.id ?? record?.['序号'] ?? index;
   const isEditing = (record, index) => editingKey === getRowKey(record, index);
@@ -100,7 +103,7 @@ const HistoricalDetailsTable = ({ tableData, dynamicColumns, loading }) => {
     <div style={{ marginTop: '20px', width: '100%', overflowX: 'auto' }}>
       <Table 
         columns={columns} 
-        dataSource={dataSource} 
+        dataSource={animatedDataSource} 
         loading={loading} 
         rowKey={getRowKey}
         scroll={{ x: 'max-content' }}

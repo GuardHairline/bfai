@@ -71,6 +71,11 @@ export const useChat = () => {
   const updateContent = (id, chunk, part) => {
     setChats(prev => prev.map(chat => {
       if (chat.id === id) {
+        // If the chunk is a complete buffer, don't append, but replace
+        if (part === 'complete') {
+          return { ...chat, content: chunk };
+        }
+
         const currentContent = chat.content;
         let newContent;
         if (typeof currentContent === 'object' && currentContent !== null) {
@@ -97,6 +102,9 @@ export const useChat = () => {
       let buffer = '';
       let isThinking = false;
 
+      // New: Buffer for the entire response
+      let fullResponseBuffer = '';
+
       const onError = () => {
         setChats(prev => prev.map(chat =>
           chat.id === assistantMessageId ? { ...chat, content: '获取回复失败，请重试。' } : chat
@@ -106,6 +114,9 @@ export const useChat = () => {
       await streamChatResponse(
         last.content, 
         (chunk) => {
+            // Accumulate the full response
+            fullResponseBuffer += chunk;
+
             buffer += chunk;
 
             const processBuffer = () => {
@@ -143,6 +154,10 @@ export const useChat = () => {
         },
         onError
       );
+
+      // After stream is complete, update the message with the full buffered content
+      updateContent(assistantMessageId, fullResponseBuffer, 'complete');
+
     }
   }, [pushMessages]);
 

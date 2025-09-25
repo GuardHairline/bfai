@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Table, Input, InputNumber, Button, Space, Popconfirm, message } from 'antd';
+import { Table, Input, InputNumber, Button, Space, Popconfirm, message, Modal } from 'antd';
 import PropTypes from 'prop-types';
 import BaselineBusinessModal from './BaselineBusinessModal';
+import { useAnimatedRows } from '../hooks/useAnimatedRows';
 
 const MeasurementTable = ({ tableData, dynamicColumns, loading, onSubmit }) => {
   // Local editable state
@@ -21,6 +22,8 @@ const MeasurementTable = ({ tableData, dynamicColumns, loading, onSubmit }) => {
     setEditingKey(null);
     setEditingValues({});
   }, [tableData]);
+
+  const animatedDataSource = useAnimatedRows(dataSource);
 
   const getRowKey = (record, index) => record.key ?? record?.id ?? record?.['序号'] ?? index;
   const isEditing = (record, index) => editingKey === getRowKey(record, index);
@@ -179,6 +182,17 @@ const MeasurementTable = ({ tableData, dynamicColumns, loading, onSubmit }) => {
 
   const columns = [...baseColumns, ...monthColumns, actionColumn];
 
+  const handleSubmit = () => {
+    if (onSubmit) {
+      onSubmit(dataSource);
+    }
+    Modal.success({
+      title: '提交完成',
+      content: '数据已提交。',
+      okText: '知道了',
+    });
+  };
+
   return (
     <div style={{ marginTop: '20px', width: '100%', overflowX: 'auto' }}>
       <Button onClick={() => setIsModalVisible(true)} type="primary" style={{ marginBottom: 16 }}>
@@ -186,7 +200,7 @@ const MeasurementTable = ({ tableData, dynamicColumns, loading, onSubmit }) => {
       </Button>
       <Table 
         columns={columns} 
-        dataSource={dataSource} 
+        dataSource={animatedDataSource} 
         loading={loading} 
         rowKey={getRowKey}
         scroll={{ x: 'max-content' }}
@@ -194,7 +208,7 @@ const MeasurementTable = ({ tableData, dynamicColumns, loading, onSubmit }) => {
         bordered
       />
       <div style={{ marginTop: '16px', textAlign: 'right' }}>
-        <Button type="primary" onClick={() => onSubmit && onSubmit(dataSource)}>
+        <Button type="primary" onClick={handleSubmit}>
           提交
         </Button>
       </div>

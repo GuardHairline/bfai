@@ -1,8 +1,10 @@
 import React from 'react';
 import { Table, Button, Tag, Space } from 'antd';
 import PropTypes from 'prop-types';
+import { useAnimatedRows } from '../hooks/useAnimatedRows';
 
 const ReferenceProjects = ({ projects, loading, onReferenceProject }) => {
+  const animatedProjects = useAnimatedRows(projects);
   const columns = [
     {
       title: '项目名称',
@@ -52,7 +54,7 @@ const ReferenceProjects = ({ projects, loading, onReferenceProject }) => {
       <h3>历史测算项目参考：</h3>
       <Table 
         columns={columns} 
-        dataSource={projects} 
+        dataSource={animatedProjects} 
         loading={loading} 
         rowKey="id" 
         pagination={{ pageSize: 5 }}

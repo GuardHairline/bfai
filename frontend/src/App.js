@@ -44,7 +44,7 @@ const App = () => {
     pushMessages,
     startNewConversationMessages,
     generateReferenceProjectMessage,
-    generateHistoricalDetailsTable,
+    generateMeasurementTable,
   } = useChat();
   
   const {
@@ -158,7 +158,7 @@ const App = () => {
                     handleStartMeasurement={handleStartMeasurement}
                     continueToMeasurement={continueToMeasurement}
                     generateReferenceProjectMessage={generateReferenceProjectMessage}
-                    generateHistoricalDetailsTable={generateHistoricalDetailsTable}
+                    generateHistoricalDetailsTable={generateMeasurementTable}
                     pushMessages={pushMessages}
                   />
                 )}
