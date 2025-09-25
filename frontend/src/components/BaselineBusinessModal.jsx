@@ -1,10 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Table, Button } from 'antd';
 import PropTypes from 'prop-types';
-import { sampleBaselineBusiness } from '../data/sampleData';
+import { fetchBaselines } from '../services/api'; // 引入新的 API 函数
 
 const BaselineBusinessModal = ({ visible, onCancel, onOk }) => {
-  const [selectedRowKeys, setSelectedRowKeys] = React.useState([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [baselines, setBaselines] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setLoading(true);
+      fetchBaselines()
+        .then(data => {
+          setBaselines(data);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [visible]);
 
   const columns = [
     { title: '动力配置', dataIndex: '动力配置', key: '动力配置' },
@@ -16,7 +31,7 @@ const BaselineBusinessModal = ({ visible, onCancel, onOk }) => {
   ];
 
   const handleOk = () => {
-    const selectedItems = sampleBaselineBusiness.filter(item => selectedRowKeys.includes(item.id));
+    const selectedItems = baselines.filter(item => selectedRowKeys.includes(item.id));
     onOk(selectedItems);
     setSelectedRowKeys([]);
   };
@@ -44,7 +59,8 @@ const BaselineBusinessModal = ({ visible, onCancel, onOk }) => {
       <Table
         rowSelection={rowSelection}
         columns={columns}
-        dataSource={sampleBaselineBusiness}
+        dataSource={baselines}
+        loading={loading}
         rowKey="id"
         pagination={{ pageSize: 5 }}
       />

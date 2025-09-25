@@ -105,6 +105,18 @@ export const fetchReferenceProjects = async (taskId, departmentId) => {
   }
 };
 
+export const fetchBaselines = async () => {
+  try {
+    const response = await fetch('/api/v1/bfa/baselines');
+    const result = await handleResponse(response);
+    return result.data || [];
+  } catch (error) {
+    console.error("Failed to fetch baselines:", error);
+    message.error("获取基准业务列表失败");
+    throw error;
+  }
+};
+
 export const fetchHistoricalProjectDetails = async (projectId) => {
   try {
     const response = await fetch(`/api/v1/bfa/history/${projectId}/details`);

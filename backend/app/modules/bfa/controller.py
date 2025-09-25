@@ -348,6 +348,66 @@ class BfaController:
             print(f"获取参考项目列表时出错: {e}")
             return jsonify(error="获取参考项目列表失败", message=str(e)), 500
 
+    def submit_task(self, task_id, data):
+        """
+        提交新的测算表
+        """
+        project_id = task_id
+        businesses = data.get('businesses', [])
+
+        if not project_id or not businesses:
+            return jsonify(error="缺少 project_id 或 businesses 数据"), 400
+
+        try:
+            with db.session.begin_nested():
+                # 1. 更新 lis_measure_person 表
+                measure_person = LisMeasurePerson.query.filter_by(project_id=project_id, measure_status='1').first()
+                if measure_person:
+                    measure_person.measure_status = '2'
+
+                # 2. 找到 lis_project_order
+                project_order = LisProjectOrder.query.filter_by(project_id=project_id).first()
+                if not project_order:
+                    return jsonify(error="找不到对应的项目订单"), 404
+
+                # 3. 插入 pm_work_hours 和 pm_month_hours_detail
+                for business in businesses:
+                    new_work_hour = PmWorkHours(
+                        select_project_id=project_id,
+                        select_order=project_order.id,
+                        order_name=project_order.order_name,
+                        power_conf=business.get('powerConfig'),
+                        market=project_order.market,
+                        business_detail=business.get('specificItem'),
+                        base_hours=business.get('baselineHours'),
+                        # 其他字段根据需要从 business 或 project_order 获取
+                    )
+                    db.session.add(new_work_hour)
+                    db.session.flush() # 为了获取 new_work_hour.id
+
+                    for key, value in business.items():
+                        if key.startswith('month'):
+                            year_month = key.replace('month', '')
+                            year = int(year_month[:4])
+                            month = int(year_month[4:])
+                            
+                            new_month_detail = PmMonthHoursDetail(
+                                measure_id=str(new_work_hour.id),
+                                order_id=str(project_order.id),
+                                select_project_id=project_id,
+                                mm=month, # 这里假设 mm 存的是月份
+                                month_input=str(value),
+                                # department 需要确定来源
+                            )
+                            db.session.add(new_month_detail)
+
+            db.session.commit()
+            return jsonify(message="测算表提交成功"), 200
+        except Exception as e:
+            db.session.rollback()
+            print(f"提交测算表时出错: {e}")
+            return jsonify(error="提交测算表失败", message=str(e)), 500
+
     def get_historical_project_details(self, project_id):
         """
         获取历史项目的详细测算数据。
@@ -461,3 +521,39 @@ class BfaController:
         except Exception as e:
             print(f"获取项目order_name时出错: {e}")
             return jsonify(error="获取项目order_name失败", message=str(e)), 500
+
+    def get_all_baselines(self):
+        """
+        获取所有工时基准数据，并关联一级任务名称。
+        返回字段和顺序匹配前端 BaselineBusinessModal.jsx 的要求。
+        """
+        try:
+            query_results = db.session.query(
+                BaHoursBasis.id,
+                BaHoursBasis.power_type,
+                LisTask.first_task.label('first_task_name'),
+                BaHoursBasis.change_type,
+                BaHoursBasis.de_range,
+                BaHoursBasis.total_hour
+            ).outerjoin(
+                LisTask, cast(BaHoursBasis.first_task, BigInteger) == LisTask.id
+            ).all()
+
+            baselines = [
+                {
+                    "id": row.id,
+                    "动力配置": row.power_type,
+                    "一级任务": row.first_task_name,
+                    "改动类型": row.change_type,
+                    "定义范围": row.de_range,
+                    "具体事项": "",  # 注意：基准库中无此字段，暂时留空
+                    "基准工时": row.total_hour
+                }
+                for row in query_results
+            ]
+            
+            return jsonify(data=baselines)
+
+        except Exception as e:
+            print(f"获取所有基准数据时出错: {e}")
+            return jsonify(error="获取所有基准数据失败", message=str(e)), 500
